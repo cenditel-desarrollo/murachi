@@ -7,7 +7,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -109,7 +108,7 @@ import org.digidoc4j.impl.DDocSignature;
 import org.digidoc4j.impl.ValidationResultForDDoc;
 import org.digidoc4j.signers.PKCS12Signer;
 
-
+import ve.gob.cenditel.murachi.MurachiException;
 
 @Path("/archivos")
 public class MurachiRESTWS {
@@ -138,23 +137,26 @@ public class MurachiRESTWS {
 	 * @param uploadedInputStream stream para obtener el archivo
 	 * @param fileDetails datos del archivo
 	 * @return
+	 * @throws MurachiException 
 	 */
-/*	
+	
 	@POST
 	@Path("/")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response uploadFile(
 			@FormDataParam("upload") InputStream uploadedInputStream,
-			@FormDataParam("upload") FormDataContentDisposition fileDetails) {
+			@FormDataParam("upload") FormDataContentDisposition fileDetails) throws MurachiException {
 		
 		//TODO manejar las excepciones correctamente
 		if (uploadedInputStream == null) {
 			System.out.println("uploadedInputStream == null");
+			throw new MurachiException("uploadedInputStream != null. datos recibidos del formulario son nulos.");
 		}
 		
 		if (fileDetails == null) {
 			System.out.println("fileDetails == null");
+			throw new MurachiException("fileDetails == null. datos recibidos del formulario son nulos.");
 		}
 				
 		String fileId = UUID.randomUUID().toString();
@@ -165,8 +167,8 @@ public class MurachiRESTWS {
 		try {
 			uploadedInputStream.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		}
 		
 		JSONObject jsonObject = new JSONObject();
@@ -177,31 +179,34 @@ public class MurachiRESTWS {
 		
 		return Response.status(200).entity(result).build();
 	}
-*/
+
 	
 	/**
 	 * Carga un archivo pasado a través de un formulario y retorna 
-	 * un json con el id del archivo en el servidor para futuras consultas
+	 * un json con la informacion de la(s) firma(s) del archivo
+	 * en caso de que este firmado
 	 * 
 	 * @param uploadedInputStream stream para obtener el archivo
 	 * @param fileDetails datos del archivo
 	 * @return
+	 * @throws MurachiException 
 	 */
 	@POST
-	@Path("/")
+	@Path("/firmados")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response uploadFileAndVerify(
 			@FormDataParam("upload") InputStream uploadedInputStream,
-			@FormDataParam("upload") FormDataContentDisposition fileDetails) {
+			@FormDataParam("upload") FormDataContentDisposition fileDetails) throws MurachiException {
 		
-		//TODO manejar las excepciones correctamente
 		if (uploadedInputStream == null) {
 			System.out.println("uploadedInputStream == null");
+			throw new MurachiException("uploadedInputStream != null. datos recibidos del formulario son nulos.");
 		}
 		
 		if (fileDetails == null) {
 			System.out.println("fileDetails == null");
+			throw new MurachiException("fileDetails == null. datos recibidos del formulario son nulos.");
 		}
 				
 		String fileId = UUID.randomUUID().toString();
@@ -212,8 +217,8 @@ public class MurachiRESTWS {
 		try {
 			uploadedInputStream.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		}
 		
 		System.out.println("File saved to server location : " + SERVER_UPLOAD_LOCATION_FOLDER + fileId);
@@ -230,8 +235,9 @@ public class MurachiRESTWS {
 	 * @param uploadedInputStream
 	 * @param fileDetails
 	 * @param fileId identificador unico del archivo de acuerdo a UUIDs
+	 * @throws MurachiException 
 	 */
-	private void saveToDisk(InputStream uploadedInputStream, FormDataContentDisposition fileDetails, String fileId) {
+	private void saveToDisk(InputStream uploadedInputStream, FormDataContentDisposition fileDetails, String fileId) throws MurachiException {
 		
 		String uploadedFileLocation = SERVER_UPLOAD_LOCATION_FOLDER + /*fileDetails.getFileName()*/ fileId;
 		
@@ -252,6 +258,7 @@ public class MurachiRESTWS {
 		}
 		catch(IOException e) {
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		}
 	}
 	
@@ -261,12 +268,13 @@ public class MurachiRESTWS {
 	 * de las mismas en un json
 	 * @param idFile identificador del archivo a verificar
 	 * @return JSON con informacion de las firmas
+	 * @throws MurachiException 
 	 */
 	@GET
 	@Path("/{idFile}")
 	@Produces("application/json")
-	public Response verifyAFile(@PathParam("idFile") String idFile) {
-		
+	public Response verifyAFile(@PathParam("idFile") String idFile) throws MurachiException {
+/*		
 		System.out.println("/{idFile}");
 		
 		String result = "";
@@ -302,6 +310,48 @@ public class MurachiRESTWS {
 		}
 		result = jsonObject.toString();
 		return Response.status(200).entity(result).build();
+*/
+		System.out.println("/{idFile}");
+		
+		String file = SERVER_UPLOAD_LOCATION_FOLDER + idFile;
+		
+		File tmpFile = new File(file);
+		
+		JSONObject jsonObject = new JSONObject();
+		
+		if (!tmpFile.exists()) {
+			System.out.println("File : " + file + " does not exists.");
+			jsonObject.put("fileExist", "false");
+			
+		}else{
+			System.out.println("File : " + file + " exists.");
+			jsonObject.put("fileExist", "true");
+			
+			String mime = getMimeType(file);
+			System.out.println("mimetype : " + mime);
+			
+			if (mime.equals("application/pdf")){
+				System.out.println(" PDF ");
+				
+				jsonObject = verifySignaturesInPdf(file);
+				
+			//}else if (mime.equals("application/vnd.etsi.asic-e+zip")){
+			}else if (mime.equals("application/zip") ){
+				System.out.println("BDOC");				
+				//jsonObject.put("formato", "BDOC");
+				//jsonObject.put("resultado", "NO IMPLEMENTADO");
+				
+				jsonObject = verifySignaturesInBdoc(file);
+			}else{
+				System.out.println("extension no reconocida");
+				jsonObject.put("fileExist", "true");
+				jsonObject.put("error", "extension not supported");				
+			}
+		}
+		String result = jsonObject.toString();
+		return Response.status(200).entity(result).build();
+		
+		
 	}
 	
 	/**
@@ -310,8 +360,9 @@ public class MurachiRESTWS {
 	 * 
 	 * @param idFile identificador del archivo a verificar
 	 * @return JSONObject con informacion de las firmas
+	 * @throws MurachiException 
 	 */
-	public JSONObject verifyALocalFile(String idFile) {
+	public JSONObject verifyALocalFile(String idFile) throws MurachiException {
 		
 		System.out.println("verifyALocalFile: " + idFile);
 		
@@ -358,8 +409,9 @@ public class MurachiRESTWS {
 	 * Retorna un JSON con informacion de las firmas del documento PDF
 	 * @param pdfFile archivo pdf a verificar
 	 * @return JSON con informacion de las firmas del documento PDF
+	 * @throws MurachiException 
 	 */
-	private JSONObject verifySignaturesInPdf(String pdfFile) {
+	private JSONObject verifySignaturesInPdf(String pdfFile) throws MurachiException {
 		
 		JSONObject jsonSignatures = new JSONObject();
 		JSONArray jsonArray = new JSONArray();
@@ -396,9 +448,10 @@ public class MurachiRESTWS {
 			
 		} catch (IOException e) {		
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		} catch (GeneralSecurityException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		}
 				
 		return jsonSignatures;		
@@ -409,6 +462,8 @@ public class MurachiRESTWS {
 	 * @param fields Campos
 	 * @param name nombre de la firma
 	 * @return HashMap con campos de informacion de la firma electronica
+	 * @throws GeneralSecurityException falla en 
+	 * @throws IOException cuando ca
 	 */
 	public HashMap<String, String> verifySignature(AcroFields fields, String name) throws GeneralSecurityException, IOException {
 				
@@ -1030,8 +1085,7 @@ public class MurachiRESTWS {
 			}else{
 				System.out.println(" dataFiles:  == 0");
 			}
-
-			
+		
 			jsonSignatures.put("numberOfSignatures", numberOfSignatures);
 			
 			ValidationResult validationResult = container.validate();
