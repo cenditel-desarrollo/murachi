@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.text.DateFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 
 import javax.ws.rs.Consumes;
@@ -109,10 +110,15 @@ import org.digidoc4j.impl.ValidationResultForDDoc;
 import org.digidoc4j.signers.PKCS12Signer;
 
 import ve.gob.cenditel.murachi.MurachiException;
+import org.apache.log4j.Logger;
 
 @Path("/archivos")
 public class MurachiRESTWS {
+	
+	static Logger logger = Logger.getLogger(MurachiRESTWS.class);
 
+	private static final String api_version = "0.1.0";
+	
 	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/"; 
 	
 	public static final String ACRAIZ = "/tmp/CERTIFICADO-RAIZ-SHA384.crt";
@@ -129,6 +135,16 @@ public class MurachiRESTWS {
 	// para reportes en modo verbose de BDOC
 	private static boolean bdocVerboseMode = true;
 
+	/**
+	 * Retorna la version del api del servicio
+	 * @return version del api del servicio
+	 */
+	@Path("/version")
+	@GET
+	@Produces(MediaType.TEXT_HTML)
+	public String returnVersion() {
+		return "<p>Murachi Version: " + api_version + "</p>";
+	}
         	
 	/**
 	 * Carga un archivo pasado a través de un formulario y retorna 
@@ -138,8 +154,7 @@ public class MurachiRESTWS {
 	 * @param fileDetails datos del archivo
 	 * @return
 	 * @throws MurachiException 
-	 */
-	
+	 */	
 	@POST
 	@Path("/")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
@@ -180,6 +195,50 @@ public class MurachiRESTWS {
 		return Response.status(200).entity(result).build();
 	}
 
+	/**
+	 * Descarga un archivo existente en el servidor
+	 * @param fileName nombre (identificador) del archivo que se desea descargar
+	 * @return archivo existente en el servidor y pasado como argumento
+	 */
+	@GET
+	@Path("/descargas/{filename}")
+	@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	public Response downloadFilebyPath(@PathParam("filename")  String fileName) {
+		return downloadFileFromServer(fileName);
+	}
+	
+	/**
+	 * Descarga un archivo pasado como argumento del servidor
+	 * @param fileName nombre o identificador del archivo que se desea descargar
+	 * @return archivo pasado como argumento del servidor
+	 */
+	private Response downloadFileFromServer(String fileName) {    
+	    String fileLocation = SERVER_UPLOAD_LOCATION_FOLDER + fileName;
+	    Response response = null;
+	    NumberFormat myFormat = NumberFormat.getInstance();
+	      myFormat.setGroupingUsed(true);
+	     
+	    // Retrieve the file
+	    File file = new File(SERVER_UPLOAD_LOCATION_FOLDER + fileName);
+	    if (file.exists()) {
+	    	ResponseBuilder builder = Response.ok(file);
+	    	builder.header("Content-Disposition", "attachment; filename=" + file.getName());
+	    	response = builder.build();
+	       
+	    	long file_size = file.length();
+	    	logger.info(String.format("Inside downloadFile==> fileName: %s, fileSize: %s bytes",
+	    			fileName, myFormat.format(file_size)));
+	    } else {
+	    	logger.error(String.format("Inside downloadFile==> FILE NOT FOUND: fileName: %s",
+	    			fileName));
+	       
+	    	response = Response.status(404).entity("FILE NOT FOUND: " + fileLocation).
+	    			type("text/plain").build();
+	    }
+	      
+	    return response;
+	  }
+	
 	
 	/**
 	 * Carga un archivo pasado a través de un formulario y retorna 
