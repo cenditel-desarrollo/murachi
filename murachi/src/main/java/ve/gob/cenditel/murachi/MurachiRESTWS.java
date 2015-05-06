@@ -117,10 +117,14 @@ public class MurachiRESTWS {
 	
 	static Logger logger = Logger.getLogger(MurachiRESTWS.class);
 
-	private static final String api_version = "0.1.0";
+	private static final String API_VERSION = "0.1.0";
 	
-	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/"; 
+	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/"; 	
 	
+	private static final String SHA256_MESSAGE_DIGEST = "SHA256";
+	
+	private static final String RSA_DIGEST_ENCRYPTION_ALGORITHM = "RSA";
+
 	public static final String ACRAIZ = "/tmp/CERTIFICADO-RAIZ-SHA384.crt";
 	public static final String PSCFII = "/tmp/PSCFII-SHA256.crt";	
 	public static final String GIDSI = "/tmp/gidsi.crt";
@@ -143,7 +147,7 @@ public class MurachiRESTWS {
 	@GET
 	@Produces(MediaType.TEXT_HTML)
 	public String returnVersion() {
-		return "<p>Murachi Version: " + api_version + "</p>";
+		return "<p>Murachi Version: " + API_VERSION + "</p>";
 	}
         	
 	/**
@@ -232,7 +236,7 @@ public class MurachiRESTWS {
 	    	logger.error(String.format("Inside downloadFile==> FILE NOT FOUND: fileName: %s",
 	    			fileName));
 	       
-	    	response = Response.status(404).entity("FILE NOT FOUND: " + fileLocation).
+	    	response = Response.status(404).entity("Archivo no encontrado: " + /*fileLocation*/ fileName).
 	    			type("text/plain").build();
 	    }
 	      
@@ -871,16 +875,16 @@ public class MurachiRESTWS {
 	    	};
 			
 			
-	    	PdfPKCS7 sgn = new PdfPKCS7(null, chain, "SHA256", null, externalDigest, false);
+	    	PdfPKCS7 sgn = new PdfPKCS7(null, chain, SHA256_MESSAGE_DIGEST, null, externalDigest, false);
 	    	
 	    	InputStream data = sap.getRangeStream();
 	    	
-	    	byte hash[] = DigestAlgorithms.digest(data, externalDigest.getMessageDigest("SHA256"));
+	    	byte hash[] = DigestAlgorithms.digest(data, externalDigest.getMessageDigest(SHA256_MESSAGE_DIGEST));
 	    	
 	    	Calendar cal = Calendar.getInstance();
 	    	byte sh[] = sgn.getAuthenticatedAttributeBytes(hash, cal, null, null, CryptoStandard.CMS);
 	    	
-	    	sh = DigestAlgorithms.digest(new ByteArrayInputStream(sh), externalDigest.getMessageDigest("SHA256"));
+	    	sh = DigestAlgorithms.digest(new ByteArrayInputStream(sh), externalDigest.getMessageDigest(SHA256_MESSAGE_DIGEST));
 	    	
 	    	System.out.println("sh length: "+ sh.length);
 	    	    	
@@ -1704,7 +1708,7 @@ public class MurachiRESTWS {
 		byte[] signatureInBytes = hexStringToByteArray(signature);
 				
 		// completar el proceso de firma
-		sgn.setExternalDigest(signatureInBytes, null, "RSA");
+		sgn.setExternalDigest(signatureInBytes, null, RSA_DIGEST_ENCRYPTION_ALGORITHM);
 		byte[] encodeSig = sgn.getEncodedPKCS7(hash, cal, null, null, null, CryptoStandard.CMS);
 		byte[] paddedSig = new byte[8192];
 		System.arraycopy(encodeSig, 0, paddedSig, 0, encodeSig.length);
