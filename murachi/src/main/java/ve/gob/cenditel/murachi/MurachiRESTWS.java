@@ -527,8 +527,9 @@ public class MurachiRESTWS {
 	 * @return HashMap con campos de informacion de la firma electronica
 	 * @throws GeneralSecurityException falla en 
 	 * @throws IOException cuando ca
+	 * @throws MurachiException 
 	 */
-	public HashMap<String, String> verifySignature(AcroFields fields, String name) throws GeneralSecurityException, IOException {
+	public HashMap<String, String> verifySignature(AcroFields fields, String name) throws GeneralSecurityException, IOException, MurachiException {
 				
 		HashMap<String, String> integrityMap = new HashMap<String, String>();
 		
@@ -659,8 +660,9 @@ public class MurachiRESTWS {
 	 * Carga el KeyStore con certificados confiables para la verificacion de certificados
 	 * de firmas
 	 * @return KeyStore con certificados confiables
+	 * @throws MurachiException 
 	 */
-	private KeyStore setupKeyStore() {
+	private KeyStore setupKeyStore() throws MurachiException {
 		
 		KeyStore ks = null;
 		try {
@@ -673,18 +675,18 @@ public class MurachiRESTWS {
 			ks.setCertificateEntry("gidsi",cf.generateCertificate(new FileInputStream(GIDSI)));
 			
 			
-		} catch (KeyStoreException e) {
-			// TODO Auto-generated catch block
+		} catch (KeyStoreException e) {			
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		} catch (CertificateException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		}		
 		return ks;
 	}
@@ -759,6 +761,7 @@ public class MurachiRESTWS {
 	 * firmante
 	 * @param req objeto request para crear una sesion y mantener elementos del 
 	 * pdf en la misma.
+	 * @throws MurachiException 
 	 * 
 	 */
 	@POST
@@ -766,9 +769,7 @@ public class MurachiRESTWS {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	//public PresignHash presignPdf(PresignParameters presignPar, @Context HttpServletRequest req) {
-	public Response presignPdf(PresignParameters presignPar, @Context HttpServletRequest req) {
-		
-		String result = null;
+	public Response presignPdf(PresignParameters presignPar, @Context HttpServletRequest req) throws MurachiException {
 		
 		PresignHash presignHash = new PresignHash();
 
@@ -918,32 +919,30 @@ public class MurachiRESTWS {
 				
 			
 		} catch (CertificateException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
+			throw new MurachiException(e1.getMessage());
 		} catch (InvalidPdfException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			presignHash.setError("No se pudo leer el archivo PDF en el servidor");
+			throw new MurachiException(e.getMessage());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
-						
-			
+			throw new MurachiException(e.getMessage());
 		} catch (DocumentException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		} catch (NoSuchProviderException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		} catch (GeneralSecurityException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 		} 
 		
 		return Response.status(200).entity(presignHash).build();
@@ -991,16 +990,14 @@ public class MurachiRESTWS {
 	 * @param req objeto request para crear una sesion y mantener elementos del 
 	 * pdf en la misma.
 	 * @throws IOException 
+	 * @throws MurachiException 
 	 */
 	@POST
 	@Path("/pdfs/resenas")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)	
-	public Response postsignPdf(PostsignParameters postsignPar, @Context HttpServletRequest req) throws IOException {
+	public Response postsignPdf(PostsignParameters postsignPar, @Context HttpServletRequest req) throws IOException, MurachiException {
 		
-		
-		// cadena resultado de la funcion
-		String result = "";
 				
 		// cadena con la firma
 		String signature = postsignPar.getSignature();
@@ -1025,22 +1022,26 @@ public class MurachiRESTWS {
 		
 		if (sgn == null) {
 			System.out.println("sgn == null");
+			throw new MurachiException("Error en completacion de firma: estructura PdfPKCS7 nula");
 		}
 		if (hash == null) {
 			System.out.println("hash == null");
+			throw new MurachiException("Error en completacion de firma: hash nulo");
 		}
 		if (cal == null) {
 			System.out.println("cal == null");
+			throw new MurachiException("Error en completacion de firma: estructura de fecha nula");
 		}
 		if (sap == null) {
 			System.out.println("sap == null");
+			throw new MurachiException("Error en completacion de firma: estructura de apariencia de firma pdf nula");
 		}
 		if (os == null) {
 			System.out.println("os == null");
+			throw new MurachiException("Error en completacion de firma: bytes de archivo nulos");
 		}
-		
-		
-		
+
+		System.out.println("antes de  hexStringToByteArray(signature)");
 		// convertir signature en bytes		
 		byte[] signatureInBytes = hexStringToByteArray(signature);
 				
@@ -1051,21 +1052,20 @@ public class MurachiRESTWS {
 		System.arraycopy(encodeSig, 0, paddedSig, 0, encodeSig.length);
 		PdfDictionary dic2 = new PdfDictionary();
 		dic2.put(PdfName.CONTENTS, new PdfString(paddedSig).setHexWriting(true));
+		
 		try {
-			sap.close(dic2);
-			
+			sap.close(dic2);			
 			stamper.close();
 			System.out.println("stamper.close");
 			
 		}catch(DocumentException e) {
-			
 			System.out.println("throw new IOException");
-			throw new IOException(e);
+			throw new MurachiException(e.getMessage());
 			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			System.out.println("IOException e");
 			e.printStackTrace();
+			throw new MurachiException(e.getMessage());
 			
 		}
 		
@@ -1075,22 +1075,19 @@ public class MurachiRESTWS {
 		
 		os.writeTo(signedFile);
 		os.flush();
-		
-		
-		
+				
 		// en este punto el archivo pdf debe estar disponible en la ruta
-		// SERVER_UPLOAD_LOCATION_FOLDER + fileId;
-		
-		// llamar a una funcion que permita descargar el archivo
-		
-		result = "Archivo firmado correctamente";
+		// SERVER_UPLOAD_LOCATION_FOLDER + fileId;		
 		System.out.println("Archivo firmado correctamente");
-		
 			
 		PostsignMessage message = new PostsignMessage();
 		//message.setMessage(SERVER_UPLOAD_LOCATION_FOLDER + fileId + "-signed.pdf");
-		message.setMessage(fileId + "-signed.pdf");
-		return Response.status(200).entity(message).build();
+		message.setMessage("{\"signedFile\":"+fileId + "-signed.pdf}");
+		//return Response.status(200).entity(message).build();
+		
+		JSONObject jsonFinalResult = new JSONObject();
+		jsonFinalResult.put("signedFileId",fileId + "-signed.pdf");
+		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
 	
 	/**
@@ -1194,12 +1191,9 @@ public class MurachiRESTWS {
 					jsonSignaturesArray.put(jo);					
 				}
 								
-				jsonSignatures.put("signatures", jsonSignaturesArray);
-								
+				jsonSignatures.put("signatures", jsonSignaturesArray);								
 				System.out.println(jsonSignatures.toString());				
-			}
-						
-			
+			}			
 		}
 		//verifyBdocContainer(container);		
 		jsonSignatures.put("validation", "executed");				
