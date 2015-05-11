@@ -153,7 +153,7 @@ public class MurachiRESTWS {
 	/**
 	 * Carga un archivo pasado a través de un formulario y retorna 
 	 * un json con el id del archivo en el servidor para futuras consultas
-	 * 
+	 * de estado de firmas
 	 * @param uploadedInputStream stream para obtener el archivo
 	 * @param fileDetails datos del archivo
 	 * @return
@@ -236,7 +236,10 @@ public class MurachiRESTWS {
 	    	logger.error(String.format("Inside downloadFile==> FILE NOT FOUND: fileName: %s",
 	    			fileName));
 	       
-	    	response = Response.status(404).entity("Archivo no encontrado: " + /*fileLocation*/ fileName).
+	    	//response = Response.status(404).entity("{\"fileExist\": " + /*fileLocation*/ fileName + "}").
+	    	//		type("text/plain").build();
+	    	
+	    	response = Response.status(404).entity("{\"fileExist\": false}").
 	    			type("text/plain").build();
 	    }
 	      
