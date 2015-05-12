@@ -115,7 +115,8 @@ import org.apache.log4j.Logger;
 @Path("/archivos")
 public class MurachiRESTWS {
 	
-	static Logger logger = Logger.getLogger(MurachiRESTWS.class);
+	final static Logger logger = Logger.getLogger(MurachiRESTWS.class);
+	
 
 	private static final String API_VERSION = "0.1.0";
 	
@@ -147,6 +148,7 @@ public class MurachiRESTWS {
 	@GET
 	@Produces(MediaType.TEXT_HTML)
 	public String returnVersion() {
+		logger.info("/version: Murachi Version: " + API_VERSION);
 		return "<p>Murachi Version: " + API_VERSION + "</p>";
 	}
         	
@@ -167,14 +169,17 @@ public class MurachiRESTWS {
 			@FormDataParam("upload") InputStream uploadedInputStream,
 			@FormDataParam("upload") FormDataContentDisposition fileDetails) throws MurachiException {
 		
-		//TODO manejar las excepciones correctamente
+		logger.info("/: uploadFile");
+		
 		if (uploadedInputStream == null) {
 			System.out.println("uploadedInputStream == null");
+			logger.error("uploadedInputStream != null. datos recibidos del formulario son nulos.");
 			throw new MurachiException("uploadedInputStream != null. datos recibidos del formulario son nulos.");
 		}
 		
 		if (fileDetails == null) {
 			System.out.println("fileDetails == null");
+			logger.error("fileDetails == null. datos recibidos del formulario son nulos.");
 			throw new MurachiException("fileDetails == null. datos recibidos del formulario son nulos.");
 		}
 				
@@ -186,6 +191,7 @@ public class MurachiRESTWS {
 		try {
 			uploadedInputStream.close();
 		} catch (IOException e) {
+			logger.error("Ocurrio una excepcion: ", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		}
@@ -195,6 +201,7 @@ public class MurachiRESTWS {
 		
 		System.out.println("File saved to server location : " + SERVER_UPLOAD_LOCATION_FOLDER + fileId);
 		String result = jsonObject.toString();
+		logger.info("/: " + result);
 		
 		return Response.status(200).entity(result).build();
 	}
@@ -208,6 +215,7 @@ public class MurachiRESTWS {
 	@Path("/descargas/{filename}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
 	public Response downloadFilebyPath(@PathParam("filename")  String fileName) {
+		logger.info("/descargas/{"+fileName+"}");
 		return downloadFileFromServer(fileName);
 	}
 	
@@ -265,13 +273,17 @@ public class MurachiRESTWS {
 			@FormDataParam("upload") InputStream uploadedInputStream,
 			@FormDataParam("upload") FormDataContentDisposition fileDetails) throws MurachiException {
 		
+		logger.info("/firmados: uploadFileAndVerify");
+		
 		if (uploadedInputStream == null) {
 			System.out.println("uploadedInputStream == null");
+			logger.error("uploadedInputStream != null. datos recibidos del formulario son nulos.");
 			throw new MurachiException("uploadedInputStream != null. datos recibidos del formulario son nulos.");
 		}
 		
 		if (fileDetails == null) {
 			System.out.println("fileDetails == null");
+			logger.error("fileDetails == null. datos recibidos del formulario son nulos.");
 			throw new MurachiException("fileDetails == null. datos recibidos del formulario son nulos.");
 		}
 				
@@ -283,6 +295,7 @@ public class MurachiRESTWS {
 		try {
 			uploadedInputStream.close();
 		} catch (IOException e) {
+			logger.error("Ocurrio una excepcion: ", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		}
@@ -292,6 +305,7 @@ public class MurachiRESTWS {
 		JSONObject jsonObject = new JSONObject();
 					
 		jsonObject = verifyALocalFile(fileId);
+		logger.info("/firmados: " + jsonObject.toString());
 		
 		return Response.status(200).entity(jsonObject.toString()).build();
 	}
@@ -308,6 +322,7 @@ public class MurachiRESTWS {
 		String uploadedFileLocation = SERVER_UPLOAD_LOCATION_FOLDER + /*fileDetails.getFileName()*/ fileId;
 		
 		System.out.println("uploadedFileLocation: " + uploadedFileLocation);
+		logger.debug("uploadedFileLocation: " + uploadedFileLocation);
 		
 		try {
 			OutputStream out = new FileOutputStream(new File(uploadedFileLocation));
@@ -323,6 +338,7 @@ public class MurachiRESTWS {
 			out.close();
 		}
 		catch(IOException e) {
+			logger.error("saveToDisk: ocurrio una excepcion", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		}
@@ -340,44 +356,9 @@ public class MurachiRESTWS {
 	@Path("/{idFile}")
 	@Produces("application/json")
 	public Response verifyAFile(@PathParam("idFile") String idFile) throws MurachiException {
-/*		
+
 		System.out.println("/{idFile}");
-		
-		String result = "";
-		String file = SERVER_UPLOAD_LOCATION_FOLDER + idFile;
-		
-		File tmpFile = new File(file);
-		
-		JSONObject jsonObject = new JSONObject();
-		
-		if (!tmpFile.exists()) {
-			System.out.println("File : " + file + " does not exists.");
-			jsonObject.put("fileExist", "false");
-			
-		}else{
-			System.out.println("File : " + file + " exists.");
-			jsonObject.put("fileExist", "true");
-			
-			String mime = getMimeType(file);
-			System.out.println("mimetype : " + mime);
-			
-			if (mime.equals("application/pdf")){
-				System.out.println(" PDF ");
-				
-				jsonObject = verifySignaturesInPdf(file);
-				
-			}else{
-				System.out.println("BDOC");
-				//jsonObject.put("formato", "BDOC");
-				//jsonObject.put("resultado", "NO IMPLEMENTADO");
-				
-				jsonObject = verifySignaturesInBdoc(file);
-			}			
-		}
-		result = jsonObject.toString();
-		return Response.status(200).entity(result).build();
-*/
-		System.out.println("/{idFile}");
+		logger.info("/{"+idFile+"}");
 		
 		String file = SERVER_UPLOAD_LOCATION_FOLDER + idFile;
 		
@@ -388,6 +369,7 @@ public class MurachiRESTWS {
 		if (!tmpFile.exists()) {
 			System.out.println("File : " + file + " does not exists.");
 			jsonObject.put("fileExist", "false");
+			logger.debug("fileExist: false");
 			
 		}else{
 			System.out.println("File : " + file + " exists.");
@@ -411,13 +393,14 @@ public class MurachiRESTWS {
 			}else{
 				System.out.println("extension no reconocida");
 				jsonObject.put("fileExist", "true");
-				jsonObject.put("error", "extension not supported");				
+				jsonObject.put("error", "extension not supported");
+				logger.debug("error: extension not supported");
 			}
 		}
 		String result = jsonObject.toString();
+		logger.info("/{"+idFile+"}: result");
 		return Response.status(200).entity(result).build();
-		
-		
+				
 	}
 	
 	/**
@@ -431,6 +414,7 @@ public class MurachiRESTWS {
 	public JSONObject verifyALocalFile(String idFile) throws MurachiException {
 		
 		System.out.println("verifyALocalFile: " + idFile);
+		logger.debug("verifyALocalFile: " + idFile);
 		
 		String file = SERVER_UPLOAD_LOCATION_FOLDER + idFile;
 		
@@ -441,6 +425,7 @@ public class MurachiRESTWS {
 		if (!tmpFile.exists()) {
 			System.out.println("File : " + file + " does not exists.");
 			jsonObject.put("fileExist", "false");
+			logger.debug("fileExist: false");
 			
 		}else{
 			System.out.println("File : " + file + " exists.");
@@ -464,7 +449,8 @@ public class MurachiRESTWS {
 			}else{
 				System.out.println("extension no reconocida");
 				jsonObject.put("fileExist", "true");
-				jsonObject.put("error", "extension not supported");				
+				jsonObject.put("error", "extension not supported");	
+				logger.debug("error: extension not supported");
 			}
 		}
 		return jsonObject;
@@ -478,6 +464,8 @@ public class MurachiRESTWS {
 	 * @throws MurachiException 
 	 */
 	private JSONObject verifySignaturesInPdf(String pdfFile) throws MurachiException {
+		
+		logger.debug("verifySignaturesInPdf: "+ pdfFile);
 		
 		JSONObject jsonSignatures = new JSONObject();
 		JSONArray jsonArray = new JSONArray();
@@ -512,10 +500,12 @@ public class MurachiRESTWS {
 				
 			}
 			
-		} catch (IOException e) {		
+		} catch (IOException e) {
+			logger.error("verifySignaturesInPdf ocurrio una excepcion", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		} catch (GeneralSecurityException e) {
+			logger.error("verifySignaturesInPdf ocurrio una excepcion", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		}
@@ -532,8 +522,10 @@ public class MurachiRESTWS {
 	 * @throws IOException cuando ca
 	 * @throws MurachiException 
 	 */
-	public HashMap<String, String> verifySignature(AcroFields fields, String name) throws GeneralSecurityException, IOException, MurachiException {
-				
+	public HashMap<String, String> verifySignature(AcroFields fields, String name) 
+			throws GeneralSecurityException, IOException, MurachiException {
+			
+		logger.debug("verifySignature()");
 		HashMap<String, String> integrityMap = new HashMap<String, String>();
 		
 		System.out.println("Signature covers whole document: " + fields.signatureCoversWholeDocument(name));
@@ -650,6 +642,7 @@ public class MurachiRESTWS {
 	 */
 	public JSONObject getJSONFromASignature(HashMap<String, String> hashMap) {
 		
+		logger.debug("getJSONFromASignature()");
 		JSONObject jsonSignature = new JSONObject();
 		
 		for (Entry<String, String> entry : hashMap.entrySet()) {
@@ -666,7 +659,7 @@ public class MurachiRESTWS {
 	 * @throws MurachiException 
 	 */
 	private KeyStore setupKeyStore() throws MurachiException {
-		
+		logger.debug("setupKeyStore()");
 		KeyStore ks = null;
 		try {
 			ks = KeyStore.getInstance(KeyStore.getDefaultType());
@@ -678,16 +671,20 @@ public class MurachiRESTWS {
 			ks.setCertificateEntry("gidsi",cf.generateCertificate(new FileInputStream(GIDSI)));
 			
 			
-		} catch (KeyStoreException e) {			
+		} catch (KeyStoreException e) {	
+			logger.error("setupKeyStore() ocurrio una excepcion", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		} catch (NoSuchAlgorithmException e) {
+			logger.error("setupKeyStore() ocurrio una excepcion", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		} catch (CertificateException e) {
+			logger.error("setupKeyStore() ocurrio una excepcion", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		} catch (IOException e) {
+			logger.error("setupKeyStore() ocurrio una excepcion", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		}		
@@ -699,9 +696,10 @@ public class MurachiRESTWS {
 	 * @param cert certificado firmante
 	 * @param signDate fecha en que se realizo la firma
 	 * @return informacion del certificado firmante de una revision en forma de HashMap
+	 * @throws MurachiException 
 	 */
-	public HashMap<String, String> getSignerCertificateInfo(X509Certificate cert, Date signDate) {
-		
+	public HashMap<String, String> getSignerCertificateInfo(X509Certificate cert, Date signDate) throws MurachiException {
+		logger.debug("getSignerCertificateInfo()");
 		HashMap<String, String> signerCertificateMap = new HashMap<String, String>();
 		
 		System.out.println("Issuer: " + cert.getIssuerDN());
@@ -727,10 +725,14 @@ public class MurachiRESTWS {
 			System.out
 					.println("The certificate was expired at the time of signing.");
 			signerCertificateMap.put("signerCertificateExpiredAtTimeOfSigning", "true");
+			logger.error("getSignerCertificateInfo() ocurrio una excepcion: The certificate was expired at the time of signing");
+			throw new MurachiException(e.getMessage());
 		} catch (CertificateNotYetValidException e) {
 			System.out
 					.println("The certificate wasn't valid yet at the time of signing.");
 			signerCertificateMap.put("signerCertificateNotValidYetAtTimeOfSigning", "true");
+			logger.error("getSignerCertificateInfo() ocurrio una excepcion: The certificate wasn't valid yet at the time of signing");
+			throw new MurachiException(e.getMessage());
 		}
 		try {
 			cert.checkValidity();
@@ -739,9 +741,13 @@ public class MurachiRESTWS {
 		} catch (CertificateExpiredException e) {
 			System.out.println("The certificate has expired.");
 			signerCertificateMap.put("signerCertificateHasExpired", "true");
+			logger.error("getSignerCertificateInfo() ocurrio una excepcion: The certificate has expired");
+			throw new MurachiException(e.getMessage());
 		} catch (CertificateNotYetValidException e) {
 			System.out.println("The certificate isn't valid yet.");
 			signerCertificateMap.put("signerCertificateNotValidYet", "true");
+			logger.error("getSignerCertificateInfo() ocurrio una excepcion: The certificate isn't valid yet");
+			throw new MurachiException(e.getMessage());
 		}
 		return signerCertificateMap;
 	}
@@ -774,6 +780,8 @@ public class MurachiRESTWS {
 	//public PresignHash presignPdf(PresignParameters presignPar, @Context HttpServletRequest req) {
 	public Response presignPdf(PresignParameters presignPar, @Context HttpServletRequest req) throws MurachiException {
 		
+		logger.info("/pdfs");
+		
 		PresignHash presignHash = new PresignHash();
 
 		// obtener el id del archivo 
@@ -792,6 +800,7 @@ public class MurachiRESTWS {
 		
 		String pdf = SERVER_UPLOAD_LOCATION_FOLDER + fileId;
 		System.out.println("archivo a firmar: " + pdf);
+		logger.debug("archivo a firmar: " + pdf);
 		
 		String mime = getMimeType(pdf);
 		
@@ -801,6 +810,7 @@ public class MurachiRESTWS {
 			//return presignHash;
 									
 			//result = presignHash.toString();
+			logger.info("El archivo que desea firmar no es un PDF.");
 			return Response.status(400).entity(presignHash).build();
 			
 		}
@@ -815,10 +825,14 @@ public class MurachiRESTWS {
 			
 			if (chain[0] == null) {
 				System.out.println("error chain[0] == null");
+				logger.error("presignPdf: error en carga de certificado de firmante");
+				throw new MurachiException("presignPdf: error en carga de certificado de firmante");
 			}else {
 				
 				System.out.println("se cargo el certificado correctamente");
 				System.out.println(chain[0].toString());
+				logger.debug("se cargo el certificado correctamente");
+				logger.debug(chain[0].toString());
 			}			
 			
 			PdfReader reader = new PdfReader(pdf);			
@@ -891,8 +905,11 @@ public class MurachiRESTWS {
 	    	sh = DigestAlgorithms.digest(new ByteArrayInputStream(sh), externalDigest.getMessageDigest(SHA256_MESSAGE_DIGEST));
 	    	
 	    	System.out.println("sh length: "+ sh.length);
+	    	logger.debug("sh length: "+ sh.length);
 	    	    	
 	    	String hashToSign = byteArrayToHexString(sh);
+	    	logger.debug("hashToSign: "+ hashToSign);
+	    	logger.debug("length: " +hashToSign.length());
 	    	System.out.println("***************************************************************");
 	    	System.out.println("HASH EN HEXADECIMAL:");
 	    	System.out.println(hashToSign);
@@ -922,32 +939,41 @@ public class MurachiRESTWS {
 				
 			
 		} catch (CertificateException e1) {
+			logger.error("presignPdf ocurrio una excepcion ", e1);
 			e1.printStackTrace();
 			throw new MurachiException(e1.getMessage());
 		} catch (InvalidPdfException e) {
+			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
 			presignHash.setError("No se pudo leer el archivo PDF en el servidor");
 			throw new MurachiException(e.getMessage());
 		} catch (IOException e) {
+			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		} catch (DocumentException e) {
+			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		} catch (InvalidKeyException e) {
+			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		} catch (NoSuchProviderException e) {
+			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		} catch (NoSuchAlgorithmException e) {
+			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		} catch (GeneralSecurityException e) {
+			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		} 
 		
+		logger.debug("presignPdf: "+ presignHash.toString());
 		return Response.status(200).entity(presignHash).build();
 		//return presignHash;
 			
@@ -961,6 +987,8 @@ public class MurachiRESTWS {
 	 * @throws IOException 
 	 */
 	private Boolean pdfAlreadySigned(PdfReader pdfReader) throws IOException {
+		
+		logger.debug("pdfAlreadySigned()");
 		Security.addProvider(new BouncyCastleProvider());
 		
 		AcroFields af = pdfReader.getAcroFields();
@@ -978,6 +1006,7 @@ public class MurachiRESTWS {
 	 * @return número de firmas del documento
 	 */
 	private int numberOfSignatures(PdfReader pdfReader) {
+		logger.debug("numberOfSignatures()");
 		Security.addProvider(new BouncyCastleProvider());
 		
 		AcroFields af = pdfReader.getAcroFields();
@@ -1001,7 +1030,7 @@ public class MurachiRESTWS {
 	@Produces(MediaType.APPLICATION_JSON)	
 	public Response postsignPdf(PostsignParameters postsignPar, @Context HttpServletRequest req) throws IOException, MurachiException {
 		
-				
+		logger.info("/pdfs/resenas");
 		// cadena con la firma
 		String signature = postsignPar.getSignature();
 		System.out.println("firma en Hex: " + signature);
@@ -1010,6 +1039,7 @@ public class MurachiRESTWS {
 		
 		String fileId = (String) session.getAttribute("fileId");
 		System.out.println("fileId: " + fileId);
+		logger.debug("fileId: " + fileId);
 		
 		PdfStamper stamper = (PdfStamper) session.getAttribute("stamper");
 		
@@ -1025,22 +1055,27 @@ public class MurachiRESTWS {
 		
 		if (sgn == null) {
 			System.out.println("sgn == null");
+			logger.error("Error en completacion de firma: estructura PdfPKCS7 nula");
 			throw new MurachiException("Error en completacion de firma: estructura PdfPKCS7 nula");
 		}
 		if (hash == null) {
 			System.out.println("hash == null");
+			logger.error("Error en completacion de firma: hash nulo");
 			throw new MurachiException("Error en completacion de firma: hash nulo");
 		}
 		if (cal == null) {
 			System.out.println("cal == null");
+			logger.error("Error en completacion de firma: estructura de fecha nula");
 			throw new MurachiException("Error en completacion de firma: estructura de fecha nula");
 		}
 		if (sap == null) {
 			System.out.println("sap == null");
+			logger.error("Error en completacion de firma: estructura de apariencia de firma pdf nula");
 			throw new MurachiException("Error en completacion de firma: estructura de apariencia de firma pdf nula");
 		}
 		if (os == null) {
 			System.out.println("os == null");
+			logger.error("Error en completacion de firma: bytes de archivo nulos");
 			throw new MurachiException("Error en completacion de firma: bytes de archivo nulos");
 		}
 
@@ -1063,10 +1098,12 @@ public class MurachiRESTWS {
 			
 		}catch(DocumentException e) {
 			System.out.println("throw new IOException");
+			logger.error("postsignPdf: ocurrio una excepcion", e);
 			throw new MurachiException(e.getMessage());
 			
 		} catch (IOException e) {
 			System.out.println("IOException e");
+			logger.error("postsignPdf: ocurrio una excepcion", e);
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 			
@@ -1082,6 +1119,7 @@ public class MurachiRESTWS {
 		// en este punto el archivo pdf debe estar disponible en la ruta
 		// SERVER_UPLOAD_LOCATION_FOLDER + fileId;		
 		System.out.println("Archivo firmado correctamente");
+		logger.debug("Archivo firmado correctamente");
 			
 		PostsignMessage message = new PostsignMessage();
 		//message.setMessage(SERVER_UPLOAD_LOCATION_FOLDER + fileId + "-signed.pdf");
@@ -1090,6 +1128,8 @@ public class MurachiRESTWS {
 		
 		JSONObject jsonFinalResult = new JSONObject();
 		jsonFinalResult.put("signedFileId",fileId + "-signed.pdf");
+		
+		logger.info(jsonFinalResult.toString());
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
 	
@@ -1101,6 +1141,7 @@ public class MurachiRESTWS {
 	@GET
 	@Path("/pdfs/{idFile}")
 	public Response getPdfSigned(@PathParam("idFile") String idFile) {
+		logger.info("/pdfs/{idFile}");
 		File file = null;
 		
 		file = new File(SERVER_UPLOAD_LOCATION_FOLDER + idFile);
