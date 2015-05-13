@@ -14,6 +14,8 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
@@ -110,6 +112,7 @@ import org.digidoc4j.impl.ValidationResultForDDoc;
 import org.digidoc4j.signers.PKCS12Signer;
 
 import ve.gob.cenditel.murachi.MurachiException;
+
 import org.apache.log4j.Logger;
 
 @Path("/archivos")
@@ -117,7 +120,6 @@ public class MurachiRESTWS {
 	
 	final static Logger logger = Logger.getLogger(MurachiRESTWS.class);
 	
-
 	private static final String API_VERSION = "0.1.0";
 	
 	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/"; 	
@@ -125,14 +127,6 @@ public class MurachiRESTWS {
 	private static final String SHA256_MESSAGE_DIGEST = "SHA256";
 	
 	private static final String RSA_DIGEST_ENCRYPTION_ALGORITHM = "RSA";
-
-	public static final String ACRAIZ = "/tmp/CERTIFICADO-RAIZ-SHA384.crt";
-	public static final String PSCFII = "/tmp/PSCFII-SHA256.crt";	
-	public static final String GIDSI = "/tmp/gidsi.crt";
-	
-	
-	private static final String ANSI_RED = "^[[31m";
-	private static final String ANSI_RESET = "^[[0m";
 	
 	// para reportes de advertencias de BDOC
 	private static boolean bdocWarnings = true;
@@ -141,14 +135,28 @@ public class MurachiRESTWS {
 	private static boolean bdocVerboseMode = true;
 
 	/**
+	 * Retorna la ruta absoluta de un archivo recurso
+	 * @param resource cadena con el nombre del archivo
+	 * @return ruta absoluta de un archivo recurso
+	 */
+	String getAbsolutePathOfResource(String resource) {
+		ClassLoader classLoader = getClass().getClassLoader();
+		File file = new File(classLoader.getResource(resource).getFile());
+		logger.debug("archivo recurso solicitado: "+ resource +" path abosulto: " + file.getAbsolutePath());
+		return file.getAbsolutePath();		
+	}
+	
+	
+	/**
 	 * Retorna la version del api del servicio
 	 * @return version del api del servicio
+	 * @throws URISyntaxException 
 	 */
 	@Path("/version")
 	@GET
 	@Produces(MediaType.TEXT_HTML)
 	public String returnVersion() {
-		logger.info("/version: Murachi Version: " + API_VERSION);
+		logger.info("/version: Murachi Version: " + API_VERSION);		
 		return "<p>Murachi Version: " + API_VERSION + "</p>";
 	}
         	
@@ -486,9 +494,12 @@ public class MurachiRESTWS {
 								
 				HashMap<String, String> signatureInformation;
 				
+				// inicializar el keystore para verificacion
+				KeyStore ks = setupKeyStore();
+				
 				for (String name : names) {
 					System.out.println("===== " + name + " =====");
-					signatureInformation = verifySignature(af, name);
+					signatureInformation = verifySignature(af, name, ks);
 					System.out.println("signatureInformation.size " + signatureInformation.size());
 					
 					JSONObject jo = getJSONFromASignature(signatureInformation);
@@ -522,7 +533,7 @@ public class MurachiRESTWS {
 	 * @throws IOException cuando ca
 	 * @throws MurachiException 
 	 */
-	public HashMap<String, String> verifySignature(AcroFields fields, String name) 
+	public HashMap<String, String> verifySignature(AcroFields fields, String name, KeyStore ks) 
 			throws GeneralSecurityException, IOException, MurachiException {
 			
 		logger.debug("verifySignature()");
@@ -609,7 +620,7 @@ public class MurachiRESTWS {
 		integrityMap.put("signatureType", (perms.isCertification() ? "certification" : "approval"));
 		
 		
-		KeyStore ks = setupKeyStore();
+		//KeyStore ks = setupKeyStore();
 		
 		Certificate[] certs = pkcs7.getSignCertificateChain();
 		Calendar cal = pkcs7.getSignDate();
@@ -666,11 +677,13 @@ public class MurachiRESTWS {
 			
 			ks.load(null, null);
 			CertificateFactory cf = CertificateFactory.getInstance("X.509");
-			ks.setCertificateEntry("acraiz",cf.generateCertificate(new FileInputStream(ACRAIZ)));
-			ks.setCertificateEntry("pscfii",cf.generateCertificate(new FileInputStream(PSCFII)));
-			ks.setCertificateEntry("gidsi",cf.generateCertificate(new FileInputStream(GIDSI)));
-			
-			
+			ks.setCertificateEntry("acraiz",
+					cf.generateCertificate(new FileInputStream(getAbsolutePathOfResource("CERTIFICADO-RAIZ-SHA384.crt"))));
+			ks.setCertificateEntry("pscfii", 
+					cf.generateCertificate(new FileInputStream(getAbsolutePathOfResource("PSCFII-SHA256.crt"))));
+			ks.setCertificateEntry("gidsi", 
+					cf.generateCertificate(new FileInputStream(getAbsolutePathOfResource("gidsi.crt"))));
+						
 		} catch (KeyStoreException e) {	
 			logger.error("setupKeyStore() ocurrio una excepcion", e);
 			e.printStackTrace();
@@ -1285,7 +1298,7 @@ public class MurachiRESTWS {
 		List<DigiDoc4JException> signatureValidationResult = signature.validate();
 		
 		if (signatureValidationResult.size() > 0) {
-			System.out.println(ANSI_RED + "Signature " + signature.getId() + " is not valid" + ANSI_RESET);
+			System.out.println("Signature " + signature.getId() + " is not valid");
 	        signatureMap.put("isValid", Boolean.toString(false));
 	        int counter = 1;
 	        
@@ -1375,7 +1388,7 @@ public class MurachiRESTWS {
 	      if (signatureValidationResult.size() == 0) {
 	        System.out.println("Signature " + signature.getId() + " is valid");
 	      } else {
-	        System.out.println(ANSI_RED + "Signature " + signature.getId() + " is not valid" + ANSI_RESET);
+	        System.out.println("Signature " + signature.getId() + " is not valid");
 	        for (DigiDoc4JException exception : signatureValidationResult) {
 	          System.out.println((isDDoc ? "        " : "   Error: ")
 	              + exception.toString());
