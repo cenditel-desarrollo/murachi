@@ -680,9 +680,15 @@ public class MurachiRESTWS {
 			ks.setCertificateEntry("acraiz",
 					cf.generateCertificate(new FileInputStream(getAbsolutePathOfResource("CERTIFICADO-RAIZ-SHA384.crt"))));
 			ks.setCertificateEntry("pscfii", 
-					cf.generateCertificate(new FileInputStream(getAbsolutePathOfResource("PSCFII-SHA256.crt"))));
+					cf.generateCertificate(new FileInputStream(getAbsolutePathOfResource("PSCFII-SHA256.crt"))));			
+			ks.setCertificateEntry("procert", 
+					cf.generateCertificate(new FileInputStream(getAbsolutePathOfResource("PSC-PROCERT-SHA256.crt"))));			
+			ks.setCertificateEntry("altosfuncionarios", 
+					cf.generateCertificate(new FileInputStream(getAbsolutePathOfResource("ACALTOS-FUNCIONARIOS-SHA256.crt"))));			
+			ks.setCertificateEntry("acsubordinadafundayacucho", 
+					cf.generateCertificate(new FileInputStream(getAbsolutePathOfResource("ACSUBORDINADA-FUNDAYACUCHO.crt"))));			
 			ks.setCertificateEntry("gidsi", 
-					cf.generateCertificate(new FileInputStream(getAbsolutePathOfResource("gidsi.crt"))));
+					cf.generateCertificate(new FileInputStream(getAbsolutePathOfResource("GIDSI.crt"))));
 						
 		} catch (KeyStoreException e) {	
 			logger.error("setupKeyStore() ocurrio una excepcion", e);
