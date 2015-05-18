@@ -1,0 +1,21 @@
+Source: esteidfirefoxplugin
+Section: web
+Priority: extra
+Maintainer: ria <info@ria.ee>
+Build-Depends: libssl-dev, libgtk2.0-dev, debhelper (>= 7)
+Standards-Version: 3.9.3
+Homepage: http://www.ria.ee
+
+Package: esteidfirefoxplugin
+Architecture: any
+Conflicts: mozilla-esteid, thunderbird-esteid, esteid-browser-plugin
+Depends: opensc, pcscd, ${shlibs:Depends}, ${misc:Depends}
+Description: Firefox ID card plugin
+ Firefox ID card signing plugin.
+
+Package: esteidfirefoxplugin-dbg
+Architecture: any
+Section: debug
+Depends: esteidfirefoxplugin (= ${binary:Version}), ${misc:Depends}
+Description: Firefox ID card plugin debug symbols
+ Firefox ID card signing plugin debug symbols.

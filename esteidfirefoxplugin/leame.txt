@@ -1,0 +1,2 @@
+Para construir el paquete debian:
+dpkg-buildpackage -rfakeroot
