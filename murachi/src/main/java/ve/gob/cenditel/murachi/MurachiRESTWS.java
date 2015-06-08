@@ -743,15 +743,21 @@ public class MurachiRESTWS {
 		} catch (CertificateExpiredException e) {
 			System.out
 					.println("The certificate was expired at the time of signing.");
+			
+			signerCertificateMap.put("signerCertificateValidAtTimeOfSigning", "false");
+			
 			signerCertificateMap.put("signerCertificateExpiredAtTimeOfSigning", "true");
 			logger.error("getSignerCertificateInfo() ocurrio una excepcion: The certificate was expired at the time of signing");
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
 		} catch (CertificateNotYetValidException e) {
 			System.out
 					.println("The certificate wasn't valid yet at the time of signing.");
+			
+			signerCertificateMap.put("signerCertificateValidAtTimeOfSigning", "false");
+			
 			signerCertificateMap.put("signerCertificateNotValidYetAtTimeOfSigning", "true");
 			logger.error("getSignerCertificateInfo() ocurrio una excepcion: The certificate wasn't valid yet at the time of signing");
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
 		}
 		try {
 			cert.checkValidity();
@@ -759,14 +765,20 @@ public class MurachiRESTWS {
 			signerCertificateMap.put("signerCertificateStillValid", "true");
 		} catch (CertificateExpiredException e) {
 			System.out.println("The certificate has expired.");
+			
+			signerCertificateMap.put("signerCertificateStillValid", "false");
+			
 			signerCertificateMap.put("signerCertificateHasExpired", "true");
 			logger.error("getSignerCertificateInfo() ocurrio una excepcion: The certificate has expired");
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
 		} catch (CertificateNotYetValidException e) {
 			System.out.println("The certificate isn't valid yet.");
+			
+			signerCertificateMap.put("signerCertificateStillValid", "false");
+			
 			signerCertificateMap.put("signerCertificateNotValidYet", "true");
 			logger.error("getSignerCertificateInfo() ocurrio una excepcion: The certificate isn't valid yet");
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
 		}
 		return signerCertificateMap;
 	}

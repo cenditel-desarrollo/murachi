@@ -30,7 +30,8 @@
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>Murachi</servlet-name>
-		<url-pattern>/murachi/*</url-pattern>
+		<!-- <url-pattern>/murachi/*</url-pattern>  -->
+		<url-pattern>/0.1/*</url-pattern>
 	</servlet-mapping>
 	
 	
