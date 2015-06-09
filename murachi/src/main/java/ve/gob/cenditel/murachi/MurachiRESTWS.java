@@ -151,13 +151,26 @@ public class MurachiRESTWS {
 	 * Retorna la version del api del servicio
 	 * @return version del api del servicio
 	 * @throws URISyntaxException 
+	 * 
+	 * @api {get} /Murachi/0.1/archivos/version Retorna la versión del API
+	 * @apiName GetVersion
+	 * @apiGroup General
+	 * @apiVersion 0.1.0
+	 * 
+	 * @apiExample Example usage:
+     * curl -i http://murachi.cenditel.gob.ve/Murachi/0.1/archivos/version
+	 * 
+	 * @apiSuccess {String} murachiVersion Versión del API
 	 */
 	@Path("/version")
 	@GET
-	@Produces(MediaType.TEXT_HTML)
-	public String returnVersion() {
-		logger.info("/version: Murachi Version: " + API_VERSION);		
-		return "<p>Murachi Version: " + API_VERSION + "</p>";
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response returnVersion() {
+		logger.info("/version: Murachi Version: " + API_VERSION);	
+		JSONObject jsonObject = new JSONObject();
+		jsonObject.put("murachiVersion", API_VERSION);
+		String result = jsonObject.toString();
+		return Response.status(200).entity(result).build();
 	}
         	
 	/**
@@ -218,6 +231,23 @@ public class MurachiRESTWS {
 	 * Descarga un archivo existente en el servidor
 	 * @param fileName nombre (identificador) del archivo que se desea descargar
 	 * @return archivo existente en el servidor y pasado como argumento
+	 * 
+	 * @api {get} /Murachi/0.1/archivos/descargas/id Descarga un archivo existente en el servidor 
+	 * @apiName Descargas
+	 * @apiGroup Archivos
+	 * @apiVersion 0.1.0
+	 * 
+	 * @apiParam {String} id Identificador del archivo que se desea descargar.
+	 * 
+	 * @apiExample Example usage:
+     * curl -i http://murachi.cenditel.gob.ve/Murachi/0.1/archivos/descargas/xxx
+	 * 	 
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Not Authenticated
+	 *     {
+	 *       "fileExist": false
+	 *     }
 	 */
 	@GET
 	@Path("/descargas/{filename}")

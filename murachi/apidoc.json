@@ -1,0 +1,7 @@
+{
+  "name": "Murachi",
+  "version": "0.1.0",
+  "description": "API para verificación y firma electrónica de archivos PDF y BDOC",
+  "title": "API Murachi",
+  "url" : "https://murachi.cenditel.gob.ve"
+}
