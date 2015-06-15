@@ -177,10 +177,54 @@ public class MurachiRESTWS {
 	 * Carga un archivo pasado a través de un formulario y retorna 
 	 * un json con el id del archivo en el servidor para futuras consultas
 	 * de estado de firmas
+	 * 
 	 * @param uploadedInputStream stream para obtener el archivo
 	 * @param fileDetails datos del archivo
 	 * @return
 	 * @throws MurachiException 
+	 * 
+	 * @api {post} /Murachi/0.1/archivos/ Carga un archivo
+	 * @apiName Archivos
+	 * @apiGroup Archivos
+	 * @apiVersion 0.1.0
+	 * @apiDescription Carga un archivo a través de un formulario y retorna un json con el id del archivo en el servidor 
+	 * 
+	 * 
+	 * @apiExample Example usage:
+     *  
+     *  var formData = new FormData();
+     *  formData.append("upload", $("#file-sign")[0].files[0]);            
+     *  $.ajax({
+     *           url: "https://murachi.cenditel.gob.ve/Murachi/0.1/archivos",
+     *           type: "post",
+     *           dataType: "json",
+     *           data: formData,
+     *           cache: false,
+     *           contentType: false,
+	 *           processData: false,
+     *           success: function(response) {
+     *                  //identificador del archivo en el servidor
+	 *                  var fileId = response.fileId.toString();
+	 *                  alert("fileId: "+ fileId);
+	 *           },
+	 *           error: function(response){
+	 *                  alert("error: " + response.error.toString());
+	 *           }
+     *  });
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 400 Bad Request
+	 *     {
+	 *       "error": "datos recibidos del formulario son nulos"
+	 *     }
+	 *     
+	 *     HTTP/1.1 500 
+	 *     {
+	 *       "error": "IOException"
+	 *     }
+	 * 
+	 * @apiSuccess {String} fileId Identificador único del archivo cargado en el servidor.
+	 * 
 	 */	
 	@POST
 	@Path("/")
@@ -195,13 +239,16 @@ public class MurachiRESTWS {
 		if (uploadedInputStream == null) {
 			System.out.println("uploadedInputStream == null");
 			logger.error("uploadedInputStream != null. datos recibidos del formulario son nulos.");
-			throw new MurachiException("uploadedInputStream != null. datos recibidos del formulario son nulos.");
+			//throw new MurachiException("uploadedInputStream != null. datos recibidos del formulario son nulos.");
+			
+			return Response.status(400).entity("{\"error\": \"datos recibidos del formulario son nulos\"}").type(MediaType.APPLICATION_JSON).build();
 		}
 		
 		if (fileDetails == null) {
 			System.out.println("fileDetails == null");
 			logger.error("fileDetails == null. datos recibidos del formulario son nulos.");
-			throw new MurachiException("fileDetails == null. datos recibidos del formulario son nulos.");
+			//throw new MurachiException("fileDetails == null. datos recibidos del formulario son nulos.");
+			return Response.status(400).entity("{\"error\": \"datos recibidos del formulario son nulos\"}").type(MediaType.APPLICATION_JSON).build();
 		}
 				
 		String fileId = UUID.randomUUID().toString();
@@ -214,7 +261,9 @@ public class MurachiRESTWS {
 		} catch (IOException e) {
 			logger.error("Ocurrio una excepcion: ", e);
 			e.printStackTrace();
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
+			return Response.status(500).entity("{\"error\":" + e.getMessage()).build();
+			
 		}
 		
 		JSONObject jsonObject = new JSONObject();
@@ -244,7 +293,7 @@ public class MurachiRESTWS {
 	 * 	 
 	 * 
 	 * @apiErrorExample {json} Error-Response:
-	 *     HTTP/1.1 401 Not Authenticated
+	 *     HTTP/1.1 404 Not Found
 	 *     {
 	 *       "fileExist": false
 	 *     }
@@ -298,10 +347,83 @@ public class MurachiRESTWS {
 	 * un json con la informacion de la(s) firma(s) del archivo
 	 * en caso de que este firmado
 	 * 
-	 * @param uploadedInputStream stream para obtener el archivo
+	 * @param uploadedInputStream stream para obtener el archivo 
 	 * @param fileDetails datos del archivo
 	 * @return
 	 * @throws MurachiException 
+	 * 
+	 * @api {post} /Murachi/0.1/archivos/firmados Carga un archivo y verifica
+	 * @apiName Firmados
+	 * @apiGroup Archivos
+	 * @apiVersion 0.1.0
+	 * @apiDescription Carga un archivo a través de un formulario y retorna un json con la información de la firma.
+	 * 
+	 * @apiSuccess {Boolean} fileExist El archivo se cargó exitosamente en el servidor.
+	 * @apiSuccess {String} error Extension not supported. En caso de que el archivo sea diferente de PDF y BDOC.
+	 * 
+	 * @apiSuccess {Number} numberOfSignatures Número de firmas existentes en el archivo.
+	 * @apiSuccess {Object[]} signatures Lista de firmas.
+	 * @apiSuccess {String}   signatures.signatureType Tipo de firma de archivo PDF: approval 
+	 * @apiSuccess {String}   signatures.signedOn Fecha en que se realiza la firma.
+	 * @apiSuccess {Boolean}   signatures.integrityCheck Chequea la integridad de la firma. 
+	 * @apiSuccess {String}   signatures.timeStamp Estampilla de tiempo
+	 * @apiSuccess {String}   signatures.reason Razón de la firma.
+	 * @apiSuccess {String}   signatures.location Ubicación donde se realiza la firma.
+	 * @apiSuccess {String}   signatures.alternativeNameOfTheSigner Nombre alternativo del firmante. 
+	 * @apiSuccess {String}   signatures.signerCertificateValidFrom Fecha de inicio de validez del certificado.
+	 * @apiSuccess {Boolean}   signatures.signerCertificateStillValid El certificado todavía está válido.
+	 * @apiSuccess {Boolean}   signatures.signerCertificateHasExpired El certificado expiró.
+	 * @apiSuccess {Boolean}   signatures.signatureCoversWholeDocument La firma abarca todo el documento PDF.
+	 * @apiSuccess {String}   signatures.filterSubtype Tipo de subfiltro: /adbe.pkcs7.sha1, /adbe.pkcs7.detached. 
+	 * @apiSuccess {String}   signatures.signerCertificateSubject Sujeto firmante.
+	 * @apiSuccess {Boolean}   signatures.signerCertificateValidAtTimeOfSigning El certificado es válido en el momento de la firma. 
+	 * @apiSuccess {String}   signatures.encryptionAlgorithm Algoritmo de cifrado.
+	 * @apiSuccess {String}   signatures.timeStampService Servicio de estampillado de tiempo.
+	 * @apiSuccess {String}   signatures.digestAlgorithm Algoritmo hash (reseña).
+	 * @apiSuccess {Boolean}   signatures.certificatesVerifiedAgainstTheKeyStore Certificado verificado contra el repositorio de certificados confiables.
+	 * @apiSuccess {Number}   signatures.documentRevision Número de revisión del documento PDF.
+	 * @apiSuccess {String}   signatures.nameOfTheSigner Nombre del firmante.
+	 * @apiSuccess {Number}   signatures.totalDocumentRevisions Número total de revisiones del documento PDF.
+	 * @apiSuccess {String}   signatures.contactInfo Información de contacto del firmante.
+	 * @apiSuccess {Boolean}   signatures.timeStampVerified Estampilla de tiempo verificada. 
+	 * @apiSuccess {String}   signatures.signerCertificateIssuer Emisor del certificado firmante.
+	 * @apiSuccess {String}   signatures.signerCertificateValidTo Fecha de fin de validez del certificado.
+	 *
+	 * @apiExample Example usage:
+	 *
+	 *  var formData = new FormData();
+     *  formData.append("upload", $("#file-sign")[0].files[0]);            
+     *  $.ajax({
+     *           url: "https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/firmados",
+     *           type: "post",
+     *           dataType: "json",
+     *           data: formData,
+     *           cache: false,
+     *           contentType: false,
+	 *           processData: false,
+     *           success: function(response) {
+	 *                  var json = JSON.stringify(response);
+	 *                  alert(json);
+	 *           },
+	 *           error: function(response){
+	 *                  alert("error: " + response.error.toString());
+	 *           }
+     *  });
+	 *
+	 *
+	 *
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 400 Bad Request
+	 *     {
+	 *       "error": "datos recibidos del formulario son nulos"
+	 *     }
+	 *     
+	 *     
+	 *     HTTP/1.1 500 
+	 *     {
+	 *       "error": "IOException"
+	 *     }
+	 *     
 	 */
 	@POST
 	@Path("/firmados")
@@ -316,13 +438,16 @@ public class MurachiRESTWS {
 		if (uploadedInputStream == null) {
 			System.out.println("uploadedInputStream == null");
 			logger.error("uploadedInputStream != null. datos recibidos del formulario son nulos.");
-			throw new MurachiException("uploadedInputStream != null. datos recibidos del formulario son nulos.");
+			//throw new MurachiException("uploadedInputStream != null. datos recibidos del formulario son nulos.");
+			return Response.status(400).entity("{\"error\": \"datos recibidos del formulario son nulos\"}").type(MediaType.APPLICATION_JSON).build();
 		}
 		
 		if (fileDetails == null) {
 			System.out.println("fileDetails == null");
 			logger.error("fileDetails == null. datos recibidos del formulario son nulos.");
-			throw new MurachiException("fileDetails == null. datos recibidos del formulario son nulos.");
+			//throw new MurachiException("fileDetails == null. datos recibidos del formulario son nulos.");
+			return Response.status(400).entity("{\"error\": \"datos recibidos del formulario son nulos\"}").type(MediaType.APPLICATION_JSON).build();
+			
 		}
 				
 		String fileId = UUID.randomUUID().toString();
@@ -335,7 +460,8 @@ public class MurachiRESTWS {
 		} catch (IOException e) {
 			logger.error("Ocurrio una excepcion: ", e);
 			e.printStackTrace();
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
+			return Response.status(500).entity("{\"error\":" + e.getMessage()).build();
 		}
 		
 		System.out.println("File saved to server location : " + SERVER_UPLOAD_LOCATION_FOLDER + fileId);
@@ -833,6 +959,66 @@ public class MurachiRESTWS {
 	 * pdf en la misma.
 	 * @throws MurachiException 
 	 * 
+	 * @api {post} /Murachi/0.1/archivos/firmados/pdfs Prepara la firma del documento PDF.
+	 * @apiName Pdfs
+	 * @apiGroup PDFS
+	 * @apiVersion 0.1.0
+	 * @apiDescription Prepara la firma de un documento PDF. Se debe pasar un JSON con la siguiente estructura:
+	 *  {"fileId":"file_id",				
+	 *	"certificate":"hex_cert_value",
+	 *  "reason":"reason",
+	 *  "location":"location",
+	 *  "contact":"contact"
+	 *  }
+	 * 
+	 * @apiSuccess {String} hash Reseña o hash del archivo que se debe cifrar con la clave privada protegida por el
+	 * dispositivo criptográfico.
+	 * 
+	 * @apiExample Example usage:
+	 * 
+	 * var parameters = JSON.stringify({
+	 *                             "fileId":fileId,
+	 *                             "certificate":cert.hex,
+	 *                             "reason":"prueba firma web",
+	 *                             "location":"Oficina",
+	 *                             "contact":"582746574336"
+	 *                             });
+	 * 
+	 * $.ajax({
+     *           url: "https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/pdfs",
+     *           type: "post",
+     *           dataType: "json",
+     *           data: parameters,
+     *           contentType: "application/json",
+     *           success: function(data, textStatus, jqXHR){
+	 *                              var json_x = data;
+     *                              var hash = json_x['hash']; 
+     *                              alert("hash recibido del servidor "+hash);
+     *           },
+	 *           error: function(jqXHR, textStatus, errorThrown){
+	 *                              //alert('error: ' + textStatus);
+	 *                              //var responseText = jQuery.parseJSON(jqXHR.responseText);
+	 *                              alert('ajax error function: ' + jqXHR.responseText);
+	 *                             
+	 *           }
+     *  });
+	 *
+	 * 
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 400 Bad Request
+	 *     {
+	 *       "hash": "",
+	 *       "error": "El archivo que desea firmar no es un PDF."
+	 *     }
+	 *     
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "hash": "",
+	 *       "error": "error en carga de certificado de firmante"
+	 *     }
+	 * 
+	 * 
 	 */
 	@POST
 	@Path("/pdfs")
@@ -887,7 +1073,12 @@ public class MurachiRESTWS {
 			if (chain[0] == null) {
 				System.out.println("error chain[0] == null");
 				logger.error("presignPdf: error en carga de certificado de firmante");
-				throw new MurachiException("presignPdf: error en carga de certificado de firmante");
+				//throw new MurachiException("presignPdf: error en carga de certificado de firmante");
+				
+				presignHash.setError("error en carga de certificado de firmante");
+				presignHash.setHash("");
+				return Response.status(500).entity(presignHash).build();
+								
 			}else {
 				
 				System.out.println("se cargo el certificado correctamente");
@@ -1002,36 +1193,74 @@ public class MurachiRESTWS {
 		} catch (CertificateException e1) {
 			logger.error("presignPdf ocurrio una excepcion ", e1);
 			e1.printStackTrace();
-			throw new MurachiException(e1.getMessage());
+			//throw new MurachiException(e1.getMessage());
+			presignHash.setError(e1.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();			
+			
 		} catch (InvalidPdfException e) {
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
+			//presignHash.setError("No se pudo leer el archivo PDF en el servidor");
+			//throw new MurachiException(e.getMessage());
 			presignHash.setError("No se pudo leer el archivo PDF en el servidor");
-			throw new MurachiException(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
 		} catch (IOException e) {
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
 		} catch (DocumentException e) {
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
 		} catch (InvalidKeyException e) {
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
 		} catch (NoSuchProviderException e) {
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
 		} catch (NoSuchAlgorithmException e) {
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
 		} catch (GeneralSecurityException e) {
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
 		} 
 		
 		logger.debug("presignPdf: "+ presignHash.toString());
@@ -1084,6 +1313,41 @@ public class MurachiRESTWS {
 	 * pdf en la misma.
 	 * @throws IOException 
 	 * @throws MurachiException 
+	 * 
+	 * 
+	 * @api {post} /Murachi/0.1/archivos/firmados/pdfs/resenas Completa la firma del documento PDF.
+	 * @apiName PdfsResenas
+	 * @apiGroup PDFS
+	 * @apiVersion 0.1.0
+	 * @apiDescription Completa la firma del documento PDF. Recibe el hash cifrado del cliente y termina de completar la firma del
+	 * archivo PDF.
+	 * 
+	 * @apiSuccess {String} signedFileId Identificador único del archivo firmado en el servidor.
+	 * 
+	 * @apiExample Example usage:
+	 * 
+	 * $.ajax({
+     *           url: "https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/pdfs/resenas",
+     *           type: "post",
+     *           dataType: "json",
+     *           data: JSON.stringify({"signature":signature.hex}),
+     *           contentType: "application/json",
+     *           success: function(data, textStatus, jqXHR){
+     *                              alert('Archivo firmado correctamente: ' + data['signedFileId']);
+     *           },
+	 *           error: function(jqXHR, textStatus, errorThrown){
+	 *                              alert('error en pdfs/resenas: ' + textStatus);
+	 *           }
+     *  });
+	 * 
+	 * 
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "El archivo que desea firmar no es un PDF."
+	 *     }
+	 * 
 	 */
 	@POST
 	@Path("/pdfs/resenas")
@@ -1114,30 +1378,46 @@ public class MurachiRESTWS {
 		
 		ByteArrayOutputStream os = (ByteArrayOutputStream) session.getAttribute("baos");
 		
+		JSONObject jsonError = new JSONObject();
+		
 		if (sgn == null) {
 			System.out.println("sgn == null");
 			logger.error("Error en completacion de firma: estructura PdfPKCS7 nula");
-			throw new MurachiException("Error en completacion de firma: estructura PdfPKCS7 nula");
+			//throw new MurachiException("Error en completacion de firma: estructura PdfPKCS7 nula");
+			
+			jsonError.put("error", "estructura PdfPKCS7 nula");
+			return Response.status(500).entity(jsonError).build();			
 		}
 		if (hash == null) {
 			System.out.println("hash == null");
 			logger.error("Error en completacion de firma: hash nulo");
-			throw new MurachiException("Error en completacion de firma: hash nulo");
+			//throw new MurachiException("Error en completacion de firma: hash nulo");
+			jsonError.put("error", "hash nulo");
+			return Response.status(500).entity(jsonError).build();
 		}
 		if (cal == null) {
 			System.out.println("cal == null");
 			logger.error("Error en completacion de firma: estructura de fecha nula");
-			throw new MurachiException("Error en completacion de firma: estructura de fecha nula");
+			//throw new MurachiException("Error en completacion de firma: estructura de fecha nula");
+			
+			jsonError.put("error", "estructura de fecha nula");
+			return Response.status(500).entity(jsonError).build();
 		}
 		if (sap == null) {
 			System.out.println("sap == null");
 			logger.error("Error en completacion de firma: estructura de apariencia de firma pdf nula");
-			throw new MurachiException("Error en completacion de firma: estructura de apariencia de firma pdf nula");
+			//throw new MurachiException("Error en completacion de firma: estructura de apariencia de firma pdf nula");
+			
+			jsonError.put("error", "estructura de apariencia de firma pdf nula");
+			return Response.status(500).entity(jsonError).build();
 		}
 		if (os == null) {
 			System.out.println("os == null");
 			logger.error("Error en completacion de firma: bytes de archivo nulos");
-			throw new MurachiException("Error en completacion de firma: bytes de archivo nulos");
+			//throw new MurachiException("Error en completacion de firma: bytes de archivo nulos");
+			
+			jsonError.put("error", "bytes de archivo nulos");
+			return Response.status(500).entity(jsonError).build();
 		}
 
 		System.out.println("antes de  hexStringToByteArray(signature)");
@@ -1160,13 +1440,18 @@ public class MurachiRESTWS {
 		}catch(DocumentException e) {
 			System.out.println("throw new IOException");
 			logger.error("postsignPdf: ocurrio una excepcion", e);
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
+			jsonError.put("error", e.getMessage());
+			return Response.status(500).entity(jsonError).build();			
 			
 		} catch (IOException e) {
 			System.out.println("IOException e");
 			logger.error("postsignPdf: ocurrio una excepcion", e);
 			e.printStackTrace();
-			throw new MurachiException(e.getMessage());
+			//throw new MurachiException(e.getMessage());
+			
+			jsonError.put("error", e.getMessage());
+			return Response.status(500).entity(jsonError).build();
 			
 		}
 		
