@@ -122,7 +122,8 @@ public class MurachiRESTWS {
 	
 	private static final String API_VERSION = "0.1.0";
 	
-	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/"; 	
+	// debe colocarse la barra al final de la ruta
+	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/murachi/";
 	
 	private static final String SHA256_MESSAGE_DIGEST = "SHA256";
 	
