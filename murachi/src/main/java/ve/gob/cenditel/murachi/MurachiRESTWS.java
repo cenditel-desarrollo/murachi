@@ -368,6 +368,7 @@ public class MurachiRESTWS {
 	 * 
 	 * @apiSuccess {String} fileId Identificador único del archivo en el servidor
 	 * @apiSuccess {Boolean} fileExist El archivo se cargó exitosamente en el servidor.
+	 * @apiSuccess {String} mimeType Tipo MIME del archivo verificado.
 	 * @apiSuccess {String} error Extension not supported. En caso de que el archivo sea diferente de PDF y BDOC.
 	 * 
 	 * @apiSuccess {Number} numberOfSignatures Número de firmas existentes en el archivo.
@@ -397,6 +398,27 @@ public class MurachiRESTWS {
 	 * @apiSuccess {Boolean}   signatures.timeStampVerified Estampilla de tiempo verificada. 
 	 * @apiSuccess {String}   signatures.signerCertificateIssuer Emisor del certificado firmante.
 	 * @apiSuccess {String}   signatures.signerCertificateValidTo Fecha de fin de validez del certificado.
+	 * @apiSuccess {String} signatures.signerCertificateSerial BDOC: Serial del certificado del firmante.
+	 * @apiSuccess {String} signatures.signatureProfile BDOC: Perfil de la firma.
+	 * @apiSuccess {String} signatures.signatureMethod BDOC: Algoritmo de firma utilizado.
+	 * @apiSuccess {String} signatures.signatureId BDOC: identificador de la firma.
+	 * @apiSuccess {String} signatures.signatureSigningTime BDOC: Hora y fecha en que se realiza la firma.
+	 * @apiSuccess {Boolean} signatures.signerCertificateIsValid BDOC: El certificado firmante es válido.
+	 * @apiSuccess {String} signatures.signerCertificateIssuer BDOC: Emisor del certificado firmante. 
+	 * @apiSuccess {String} signatures.signatureValidationException BDOC: Exepciones de la validación de la firma.
+	 * @apiSuccess {String} signatures.isValid BDOC: Firma electrónica válida.
+	 * @apiSuccess {String} signatures.signerCertificateSubjectName BDOC: Nombre del sujeto firmante. 
+	 *
+	 * @apiSuccess {Boolean}   containerValidation BDOC: Especifica si el contenedor posee una estructura válida.  
+	 * @apiSuccess {Number}   numberOfDataFiles BDOC: Cantidad de archivos incluidos en el contenedor BDOC.
+	 * @apiSuccess {Object[]} dataFiles BDOC: Lista de archivos incluidos en el contenedor.
+	 * @apiSuccess {String} dataFiles.name BDOC: Nombre del archivo incluido en el contenedor.
+	 * @apiSuccess {String} dataFiles.dataFileSize BDOC: Tamaño del archivo incluido en el contenedor.
+	 * @apiSuccess {String} dataFiles.filename BDOC: Nombre del archivo incluido en el contenedor.
+	 * @apiSuccess {String} dataFiles.mediaType BDOC: Tipo MIME del archivo incluido en el contenedor.
+	 * @apiSuccess {Object[]} signatures BDOC: Lista de firmas del contenedor BDOC
+	 * 
+	 *
 	 *
 	 * @apiExample Example usage:
 	 *
@@ -1534,7 +1556,9 @@ public class MurachiRESTWS {
 	 */
 	private JSONObject verifySignaturesInBdoc(String bdocFile) {
 	
+		logger.debug("verifySignaturesInBdoc("+bdocFile+")");
 		System.out.println("verifySignaturesInBdoc(String bdocFile)");
+		
 		JSONObject jsonSignatures = new JSONObject();
 
 		JSONArray jsonSignaturesArray = new JSONArray();
@@ -1555,6 +1579,7 @@ public class MurachiRESTWS {
 		try
 		{
 			container = Container.open(bdocFile, configuration);
+			logger.debug("Container.open("+bdocFile+", DIGIDOC4J_CONFIGURATION)");
 		} catch(DigiDoc4JException e) 
 		{
 			jsonSignatures.put("error", "File is not a valid BDOC container");
@@ -1571,7 +1596,7 @@ public class MurachiRESTWS {
 			System.out.println("fileExist: true");
 			
 			jsonSignatures.put("fileId", idFile);
-			jsonSignatures.put("mimeType", "application/pdf");
+			jsonSignatures.put("mimeType", "application/vnd.etsi.asic-e+zip");
 			
 			// informacion de archivos dentro del contenedor
 			if (container.getDataFiles().size() > 0){
@@ -1584,8 +1609,13 @@ public class MurachiRESTWS {
 		
 			jsonSignatures.put("numberOfSignatures", numberOfSignatures);
 			
+			System.out.println("->container.validate()");
 			ValidationResult validationResult = container.validate();
+			System.out.println("...container.validate()");
+			
+			
 			List<DigiDoc4JException> exceptions = validationResult.getContainerErrors();
+			System.out.println("...validationResult.getContainerErrors()");
 			
 			boolean isDDoc = container.getDocumentType() == DocumentType.DDOC;
 			
@@ -1632,7 +1662,7 @@ public class MurachiRESTWS {
 			}			
 		}
 		//verifyBdocContainer(container);		
-		jsonSignatures.put("validation", "executed");				
+		//jsonSignatures.put("validation", "executed");				
 		return jsonSignatures;
 	}
 	
@@ -1642,16 +1672,30 @@ public class MurachiRESTWS {
 	 * @return JSON con informacion de los DataFiles incluidos en el contenedor
 	 */
 	private JSONArray getJSONFromBDOCDataFiles(List<DataFile> dataFilesList) {
+		
+		System.out.println("getJSONFromBDOCDataFiles(List<DataFile> dataFilesList)");
+		logger.debug("getJSONFromBDOCDataFiles(List<DataFile> dataFilesList)");
+		
 		JSONArray jsonDataFileArray = new JSONArray();
 		
 		for (int i = 0; i < dataFilesList.size(); i++){
 			
 			JSONObject tmpJsonDataFile = new JSONObject();
 			DataFile df = dataFilesList.get(i);
+			System.out.println("...dataFilesList.get(i)");
+						
 			tmpJsonDataFile.put("dataFileSize", Long.toString(df.getFileSize()));
+			logger.debug("dataFileSize: " + Long.toString(df.getFileSize()));
+			
 			tmpJsonDataFile.put("filename", df.getId());
+			logger.debug("filename: " + df.getId());
+			
 			tmpJsonDataFile.put("mediaType", df.getMediaType());
+			logger.debug("mediaType: " + df.getMediaType());
+			
 			tmpJsonDataFile.put("name", df.getName());
+			logger.debug("name: " + df.getName());
+			
 			jsonDataFileArray.put(tmpJsonDataFile);
 		}
 		
@@ -1659,6 +1703,7 @@ public class MurachiRESTWS {
 		//jsonDataFile.put("dataFiles", jsonDataFileArray);
 		
 		//return jsonDataFile;
+		System.out.println("...saliendo");
 		return jsonDataFileArray;
 	}
 
@@ -1669,6 +1714,7 @@ public class MurachiRESTWS {
 	 * @return Hashmap con la informacion de una firma electronica que se verifica
 	 */
 	private static HashMap<String, String> verifyBDOCSignature(Signature signature, DocumentType documentType) {
+		logger.debug("verifyBDOCSignature(Signature signature, DocumentType documentType)");
 		
 		HashMap<String, String> signatureMap = new HashMap<String, String>();
 		
@@ -1679,6 +1725,9 @@ public class MurachiRESTWS {
 		if (signatureValidationResult.size() > 0) {
 			System.out.println("Signature " + signature.getId() + " is not valid");
 	        signatureMap.put("isValid", Boolean.toString(false));
+	        
+	        logger.debug("Signature " + signature.getId() + " is not valid");
+	        
 	        int counter = 1;
 	        
 	        //JSONArray jsonValidationExceptionArray = new JSONArray();
@@ -1698,10 +1747,10 @@ public class MurachiRESTWS {
 	        signatureMap.put("isDDocTestSignature", Boolean.toString(true));
 	      }
 		}
-		else{
-			
+		else{			
 			System.out.println("Signature " + signature.getId() + " is valid");
-	    	signatureMap.put("isValid", Boolean.toString(true));
+			logger.debug("Signature " + signature.getId() + " is valid");
+	    	signatureMap.put("isValid", Boolean.toString(true));	    	
 		}
 		signatureMap.put("signatureId", signature.getId());
     	signatureMap.put("signatureProfile", signature.getProfile().toString());
@@ -1734,14 +1783,217 @@ public class MurachiRESTWS {
     	}else{
     		signatureMap.put("signerCertificateIsValid", Boolean.toString(false));
     	}
-    	
-    	
-    	
+    	    	
 		return signatureMap;
 	}
 	
 	
+	@POST
+	@Path("/bdocs")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response presignBdoc(PresignParametersBdoc presignPar, @Context HttpServletRequest req) throws MurachiException {
+		
+		logger.info("/bdocs");
+		
+		PresignHash presignHash = new PresignHash();
+
+		// obtener el id del archivo a firmaer
+		String fileId = presignPar.getFileId();
+		
+		// cadena con el certificado
+		String certHex = presignPar.getCertificate();
+		System.out.println("certificado en Hex: " + certHex);
+
+		String city = presignPar.getCity();
+		logger.debug("city: " + city);
+		
+		String state = presignPar.getState();
+		logger.debug("state: " + state);
+		
+		String postalCode = presignPar.getPostalCode();
+		logger.debug("postalCode: " + postalCode);
+		
+		String country = presignPar.getCountry();
+		logger.debug("country: " + country);
+		
+		String role = presignPar.getRole();
+		logger.debug("role: " + role);
+		
+		CertificateFactory cf;
+		X509Certificate signerCert;
+		
+		// 
+		String hashToSign = "";
+				
+		
+		SignedInfo signedInfo;
+		
+		fileId = presignPar.getFileId();
+		String sourceFile = SERVER_UPLOAD_LOCATION_FOLDER + fileId;
+		System.out.println("archivo a firmar: " + sourceFile);
+		logger.debug("archivo a firmar: " + sourceFile);
+		
+		String sourceFileMimeType = getMimeTypeWithTika(sourceFile);
+		logger.debug("mimeType del archivo a firmar: " + sourceFileMimeType);
+		
+		certHex = presignPar.getCertificate();
+		System.out.println("certificado en Hex: " + certHex);
+		logger.debug("certificado firmante en Hex: " + certHex);
+		
+		try
+		{
+			
+		
+		Security.addProvider(new BouncyCastleProvider());
+		Container container = null;
+		
+		Configuration configuration = new Configuration(Configuration.Mode.PROD);
+		
+		configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+		
+		configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+	
+		container = Container.create(Container.DocumentType.BDOC, configuration);
+		
+		SignatureParameters signatureParameters = new SignatureParameters();
+	    SignatureProductionPlace productionPlace = new SignatureProductionPlace();
+	    productionPlace.setCity(city);
+	    productionPlace.setStateOrProvince(state);
+	    productionPlace.setPostalCode(postalCode);
+	    productionPlace.setCountry(country);
+	    signatureParameters.setProductionPlace(productionPlace);
+	    signatureParameters.setRoles(asList(role));
+	    container.setSignatureParameters(signatureParameters);
+	    container.setSignatureProfile(SignatureProfile.B_BES);
+		
+		container.addDataFile(sourceFile, sourceFileMimeType);
+		
+		cf = CertificateFactory.getInstance("X.509");
+		
+		InputStream in = new ByteArrayInputStream(hexStringToByteArray(certHex));
+		
+		signerCert = (X509Certificate) cf.generateCertificate(in);
+		
+		signedInfo = container.prepareSigning(signerCert);
+		
+		hashToSign = byteArrayToHexString(signedInfo.getDigest());
+		//System.out.println("presignBdoc - hash: " + byteArrayToHexString(signedInfo.getDigest()));
+		System.out.println("presignBdoc - hash: " + hashToSign);
+		logger.debug("presignBdoc - hash: " + hashToSign);
+		
+		// establecer el nombre del archivo a serializar 
+		String serializedContainerId = sourceFile + "-serialized";
+		
+		// serializar el archivo 
+		serialize(container, serializedContainerId);
+		
+		
+		// almacenar los objetos necesarios para realizar el postsign en una sesion
+		HttpSession session = req.getSession(true);
+		session.setAttribute("hashToSign", hashToSign);				
+		session.setAttribute("fileId", fileId);
+		session.setAttribute("serializedContainerId", serializedContainerId);
+		
+		
+		
+		} catch(IOException e)
+		{
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+		} catch(CertificateException e)
+		{
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+		}
+			
+			
+		// creacion del json
+		JSONObject jsonHash = new JSONObject();
+		jsonHash.put("hashToSign", hashToSign);
+					
+					
+		presignHash.setHash(hashToSign);
+		presignHash.setError("");
+		
+		
+		logger.debug("presignBdoc: "+ presignHash.toString());
+		return Response.status(200).entity(presignHash).build();			
+	}
+	
+	
+	@POST
+	@Path("/bdocs/resenas")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)	
+	public Response postsignBdoc(PostsignParameters postsignPar, @Context HttpServletRequest req) throws IOException, MurachiException {
+		
+		logger.info("/bdocs/resenas");
+
+		// cadena con la firma
+		String signature = postsignPar.getSignature();
+		System.out.println("firma en Hex: " + signature);
+		logger.info("firma en Hex: " + signature);
+		
+		HttpSession session = req.getSession(false);
+		
+		String fileId = (String) session.getAttribute("fileId");
+		System.out.println("fileId: " + fileId);
+		logger.debug("fileId: " + fileId);
+		
+		String serializedContainerId = (String) session.getAttribute("serializedContainerId") + ".bin";
+		
+		
+		System.out.println("serializedContainerId: " + serializedContainerId);
+		logger.debug("serializedContainerId: " + serializedContainerId);
+		
+		String signedBdoc = SERVER_UPLOAD_LOCATION_FOLDER + fileId + ".bdoc";
+		
+		try {
+			Container deserializedContainer = deserializer(serializedContainerId);
+			
+			byte[] signatureInBytes = hexStringToByteArray(signature);
+			
+			deserializedContainer.signRaw(signatureInBytes);
+			deserializedContainer.save(signedBdoc);
+			logger.debug("archivo firmado escrito en: " + signedBdoc);
+			
+			
+			
+		} catch (ClassNotFoundException e) {
+			//e.printStackTrace();
+			
+			JSONObject jsonError = new JSONObject();
+						
+			System.out.println("sgn == null");
+			logger.error("error: " + e.getMessage());
+							
+			jsonError.put("error", e.getMessage());
+			return Response.status(500).entity(jsonError).build();				
+		}
+				
+		// en este punto el archivo bdoc debe estar disponible en la ruta
+		// SERVER_UPLOAD_LOCATION_FOLDER + fileId;		
+		System.out.println("Archivo firmado correctamente");
+		logger.debug("Archivo firmado correctamente");
+			
+		PostsignMessage message = new PostsignMessage();
+		message.setMessage("{\"signedFile\":"+fileId + ".bdoc}");
+		
+		
+		JSONObject jsonFinalResult = new JSONObject();
+		jsonFinalResult.put("signedFileId",fileId + ".bdoc");
+		
+		logger.info(jsonFinalResult.toString());
+		return Response.status(200).entity(jsonFinalResult.toString()).build();
+	}
+	
+	
 	private static void verifyBdocContainer(Container container) {
+		logger.debug("verifyBdocContainer(Container container)");
+		
 	    ValidationResult validationResult = container.validate();
 
 	    List<DigiDoc4JException> exceptions = validationResult.getContainerErrors();
@@ -1766,8 +2018,10 @@ public class MurachiRESTWS {
 	      List<DigiDoc4JException> signatureValidationResult = signature.validate();
 	      if (signatureValidationResult.size() == 0) {
 	        System.out.println("Signature " + signature.getId() + " is valid");
+	        logger.debug("Signature " + signature.getId() + " is valid");
 	      } else {
 	        System.out.println("Signature " + signature.getId() + " is not valid");
+	        logger.debug("Signature " + signature.getId() + " is not valid");
 	        for (DigiDoc4JException exception : signatureValidationResult) {
 	          System.out.println((isDDoc ? "        " : "   Error: ")
 	              + exception.toString());
@@ -1775,6 +2029,7 @@ public class MurachiRESTWS {
 	      }
 	      if (isDDoc && isDDocTestSignature(signature)) {
 	        System.out.println("Signature " + signature.getId() + " is a test signature");
+	        logger.debug("Signature " + signature.getId() + " is a test signature");
 	      }
 	    }
 
@@ -2193,9 +2448,9 @@ public class MurachiRESTWS {
 	@Path("/bdoc/")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public PresignHash presignBdoc(PresignParameters presignPar, @Context HttpServletRequest req) {
+	public PresignHash presignBdoc2(PresignParameters presignPar, @Context HttpServletRequest req) {
 		
-		System.out.println("presignBdoc: ");
+		System.out.println("presignBdoc2: ");
 		
 		
 		String fileId;

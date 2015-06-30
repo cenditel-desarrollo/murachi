@@ -3,7 +3,7 @@ package ve.gob.cenditel.murachi;
 
 /**
  * Clase PresignParameters que representa el objeto que se mapea al JSON
- * que se envia a /archivos/prepararfirmapdf
+ * que se envia a /archivos/pdfs
  * 
  * @author aaraujo
  *
