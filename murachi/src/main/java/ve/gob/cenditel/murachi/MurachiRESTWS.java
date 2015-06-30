@@ -114,6 +114,7 @@ import org.digidoc4j.signers.PKCS12Signer;
 import ve.gob.cenditel.murachi.MurachiException;
 
 import org.apache.log4j.Logger;
+import org.apache.tika.Tika;
 
 @Path("/archivos")
 public class MurachiRESTWS {
@@ -129,6 +130,12 @@ public class MurachiRESTWS {
 	
 	private static final String RSA_DIGEST_ENCRYPTION_ALGORITHM = "RSA";
 	
+	private final String DIGIDOC4J_CONFIGURATION = getAbsolutePathOfResource("digidoc4j.yaml");
+	
+	private final String DIGIDOC4J_TSL_LOCATION = "file://" + getAbsolutePathOfResource("venezuela-tsl.xml");
+	
+
+
 	// para reportes de advertencias de BDOC
 	private static boolean bdocWarnings = true;
 	
@@ -359,6 +366,7 @@ public class MurachiRESTWS {
 	 * @apiVersion 0.1.0
 	 * @apiDescription Carga un archivo a través de un formulario y retorna un json con la información de la firma.
 	 * 
+	 * @apiSuccess {String} fileId Identificador único del archivo en el servidor
 	 * @apiSuccess {Boolean} fileExist El archivo se cargó exitosamente en el servidor.
 	 * @apiSuccess {String} error Extension not supported. En caso de que el archivo sea diferente de PDF y BDOC.
 	 * 
@@ -587,6 +595,8 @@ public class MurachiRESTWS {
 		
 		JSONObject jsonObject = new JSONObject();
 		
+		jsonObject.put("fileId", idFile);
+		
 		if (!tmpFile.exists()) {
 			System.out.println("File : " + file + " does not exists.");
 			jsonObject.put("fileExist", "false");
@@ -596,7 +606,9 @@ public class MurachiRESTWS {
 			System.out.println("File : " + file + " exists.");
 			jsonObject.put("fileExist", "true");
 			
-			String mime = getMimeType(file);
+			//String mime = getMimeType(file);
+			String mime = getMimeTypeWithTika(file);
+						
 			System.out.println("mimetype : " + mime);
 			
 			if (mime.equals("application/pdf")){
@@ -632,6 +644,10 @@ public class MurachiRESTWS {
 		
 		logger.debug("verifySignaturesInPdf: "+ pdfFile);
 		
+		java.nio.file.Path path = Paths.get(pdfFile);
+		String idFile = path.getFileName().toString();
+		
+		
 		JSONObject jsonSignatures = new JSONObject();
 		JSONArray jsonArray = new JSONArray();
 		
@@ -643,11 +659,16 @@ public class MurachiRESTWS {
 			AcroFields af = reader.getAcroFields();
 			ArrayList<String> names = af.getSignatureNames();
 			if (names.size() <= 0) {
-				jsonSignatures.put("signatureNumber", "0");
+				jsonSignatures.put("fileExist", "true");
+				jsonSignatures.put("fileId", idFile);
+				jsonSignatures.put("numberOfSignatures", "0");
+				jsonSignatures.put("mimeType", "application/pdf");
 			}else{
 				
 				jsonSignatures.put("fileExist", "true");
+				jsonSignatures.put("fileId", idFile);
 				jsonSignatures.put("numberOfSignatures", names.size());
+				jsonSignatures.put("mimeType", "application/pdf");
 								
 				HashMap<String, String> signatureInformation;
 				
@@ -1513,20 +1534,44 @@ public class MurachiRESTWS {
 	 */
 	private JSONObject verifySignaturesInBdoc(String bdocFile) {
 	
+		System.out.println("verifySignaturesInBdoc(String bdocFile)");
 		JSONObject jsonSignatures = new JSONObject();
 
 		JSONArray jsonSignaturesArray = new JSONArray();
 		JSONArray jsonContainerValidationExceptionArray = new JSONArray();
 		
+		java.nio.file.Path path = Paths.get(bdocFile);
+		String idFile = path.getFileName().toString();
+		
+		
 		Security.addProvider(new BouncyCastleProvider());
-		Container container;
-		container = Container.open(bdocFile);
+		Container container = null;
+		
+		Configuration configuration = new Configuration(Configuration.Mode.PROD);
+		
+		configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+		
+		configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		try
+		{
+			container = Container.open(bdocFile, configuration);
+		} catch(DigiDoc4JException e) 
+		{
+			jsonSignatures.put("error", "File is not a valid BDOC container");
+			return jsonSignatures;
+		}
+		
 		
 		int numberOfSignatures = container.getSignatures().size();
 		if (numberOfSignatures == 0){
 			jsonSignatures.put("signatureNumber", "0");
+			System.out.println("signatureNumber: 0");
 		}else{
 			jsonSignatures.put("fileExist", "true");
+			System.out.println("fileExist: true");
+			
+			jsonSignatures.put("fileId", idFile);
+			jsonSignatures.put("mimeType", "application/pdf");
 			
 			// informacion de archivos dentro del contenedor
 			if (container.getDataFiles().size() > 0){
@@ -2275,10 +2320,11 @@ public class MurachiRESTWS {
 		
 		Security.addProvider(new BouncyCastleProvider());
 		
-		Configuration configuration = new Configuration(Configuration.Mode.TEST);
+		Configuration configuration = new Configuration(Configuration.Mode.PROD);
 		
-		configuration.loadConfiguration("/home/aaraujo/desarrollo/2015/workspace-luna/JAXRS-Murachi/WebContent/WEB-INF/lib/digidoc4j.yaml");
-		configuration.setTslLocation("http://localhost/trusted-test-mp.xml");
+		configuration.loadConfiguration("/tmp/digidoc4j.yaml");
+		//configuration.setTslLocation("http://localhost/trusted-test-mp.xml");
+		configuration.setTslLocation("file:///tmp/venezuela-tsl.xml");
 		
 	    Container container = Container.create(configuration);
 	    SignatureParameters signatureParameters = new SignatureParameters();
@@ -2288,8 +2334,8 @@ public class MurachiRESTWS {
 	    signatureParameters.setRoles(asList("Desarrollador"));
 	    container.setSignatureParameters(signatureParameters);
 	    container.setSignatureProfile(SignatureProfile.B_BES);
-	    container.addDataFile("/tmp/01311213-5756-4707-a73d-6d42b09b26fd", "text/plain");
-	    container.sign(new PKCS12Signer("/tmp/JuanHilario.p12", "123456".toCharArray()));
+	    container.addDataFile("/tmp/salida.txt", "text/plain");
+	    container.sign(new PKCS12Signer("/tmp/tibisay.p12", "123456".toCharArray()));
 //	    Container container = Container.open("util/faulty/bdoc21-bad-nonce-content.bdoc");
 	    container.save("/tmp/signed.bdoc");
 	    ValidationResult result = container.validate();
@@ -2571,6 +2617,38 @@ public class MurachiRESTWS {
 		}		
 		return result;		 
 	}
+	
+	/**
+	 * Retorna el mimeType del archivo pasado como argumento
+	 * @param absolutFilePath ruta absoluta del archivo
+	 * @return mimeType del archivo pasado como argumento
+	 */
+	public String getMimeTypeWithTika(String absolutFilePath) {
+				
+		String mimeType = "";		
+		
+		Tika tika = new Tika();
+		File file = new File(absolutFilePath);
+		try {
+			mimeType = tika.detect(file);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		/*
+		java.nio.file.Path source = Paths.get(absolutFilePath);
+		try {
+			result = Files.probeContentType(source);			
+			System.out.println(result);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		*/		
+		return mimeType;		 
+	}
+	
 	
 	/**
 	 * Convierte una cadena Hexadecimal en un arreglo de bytes

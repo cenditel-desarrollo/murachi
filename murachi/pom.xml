@@ -104,6 +104,11 @@
             <version>1.7.7</version>
 		</dependency>
 		
+		<dependency>
+    		<groupId>org.apache.tika</groupId>
+    		<artifactId>tika-core</artifactId>
+    		<version>1.9</version>
+ 		</dependency>
 		
 	</dependencies>
   

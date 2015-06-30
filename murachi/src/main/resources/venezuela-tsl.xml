@@ -1,0 +1,353 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<TrustServiceStatusList xmlns="http://uri.etsi.org/02231/v2#" xmlns:ns2="http://www.w3.org/2000/09/xmldsig#" xmlns:ns3="http://uri.etsi.org/02231/v2/additionaltypes#" xmlns:ns4="http://uri.etsi.org/01903/v1.3.2#" xmlns:ns5="http://uri.etsi.org/TrstSvc/SvcInfoExt/eSigDir-1999-93-EC-TrustedList/#" Id="VE0001" TSLTag="http://uri.etsi.org/19612/TSLTag">
+   <SchemeInformation>
+      <TSLVersionIdentifier>4</TSLVersionIdentifier>
+      <TSLSequenceNumber>1</TSLSequenceNumber>
+      <TSLType>http://uri.etsi.org/TrstSvc/TrustedList/TSLType/VElist</TSLType>
+      <SchemeOperatorName>
+         <Name xml:lang="en">FUNDACION CENDITEL</Name>
+         <Name xml:lang="es">FUNDACION CENDITEL</Name>
+      </SchemeOperatorName>
+      <SchemeOperatorAddress>
+         <PostalAddresses>
+            <PostalAddress xml:lang="en">
+               <StreetAddress>Av Alberto Carnevalli</StreetAddress>
+               <Locality>Merida</Locality>
+               <PostalCode>5101</PostalCode>
+               <CountryName>VE</CountryName>
+            </PostalAddress>
+         </PostalAddresses>
+         <ElectronicAddress>
+            <URI xml:lang="en">mailto:seguridad@cenditel.gob.ve</URI>
+            <URI xml:lang="en">http://www.cenditel.gob.ve</URI>
+         </ElectronicAddress>
+      </SchemeOperatorAddress>
+      <SchemeName>
+         <Name xml:lang="en">VE:Supervision/Accreditation Status List of certification services from Certification Service Providers, which are supervised/accredited by Superintendencia de Servicios de Certificacion Electronica (SUSCERTE).</Name>
+         <Name xml:lang="es">VE:Lista de estado de servicios de certificacion de Proveedores de Servicios de Certificacion, los cuales son supervisados y acreditados de acuerdo a la normativa vigente de la Superintendencia de Servicios de Certificacion Electronica (SUSCERTE).</Name>
+      </SchemeName>
+      <SchemeInformationURI>
+         <URI xml:lang="en">http://www.cenditel.gob.ve</URI>
+         <URI xml:lang="en">http://www.suscerte.gob.ve</URI>
+      </SchemeInformationURI>
+      <StatusDeterminationApproach>http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/VEdetermination</StatusDeterminationApproach>
+      <SchemeTypeCommunityRules>
+         <URI xml:lang="en">http://www.cenditel.gob.ve</URI>
+         <URI xml:lang="en">http://www.suscerte.gob.ve</URI>
+      </SchemeTypeCommunityRules>
+      <SchemeTerritory>VE</SchemeTerritory>
+      <PolicyOrLegalNotice>
+         <TSLLegalNotice xml:lang="en">The applicable legal framework for the present TSL implementation of the Trusted List of supervised/accredited Certification Service Providers for Venezuela is based on LSMDFE.</TSLLegalNotice>
+      </PolicyOrLegalNotice>
+      <HistoricalInformationPeriod>65535</HistoricalInformationPeriod>
+      <ListIssueDateTime>2015-05-20T07:00:00Z</ListIssueDateTime>
+      <NextUpdate>
+         <dateTime>2015-11-19T06:00:00Z</dateTime>
+      </NextUpdate>
+      <DistributionPoints>
+         <URI>https://tibisay.cenditel.gob.ve/murachi/raw-attachment/wiki/WikiStart/venezuela-tsl.xml</URI>
+      </DistributionPoints>
+   </SchemeInformation>
+   <TrustServiceProviderList>
+      <TrustServiceProvider>
+         <TSPInformation>
+            <TSPName>
+               <Name xml:lang="en">Superintendencia de Servicios de Certificacion Electronica</Name>
+               <Name xml:lang="es">Superintendencia de Servicios de Certificacion Electronica</Name>
+            </TSPName>
+            <TSPTradeName>
+               <Name xml:lang="en">Autoridad de Certificacion Raiz del Estado Venezolano</Name>
+               <Name xml:lang="en">VE</Name>
+               <Name xml:lang="es">Autoridad de Certificacion Raiz del Estado Venezolano</Name>
+               <Name xml:lang="es">VE</Name>
+            </TSPTradeName>
+            <TSPAddress>
+               <PostalAddresses>
+                  <PostalAddress xml:lang="en">
+                     <StreetAddress>Av. Andres Bello. Edificio BFC. Piso 13</StreetAddress>
+                     <Locality>Distrito Capital</Locality>
+                     <PostalCode>1010</PostalCode>
+                     <CountryName>VE</CountryName>
+                  </PostalAddress>
+                  <PostalAddress xml:lang="es">
+                     <StreetAddress>Av. Andres Bello. Edificio BFC. Piso 13</StreetAddress>
+                     <Locality>Distrito Capital</Locality>
+                     <PostalCode>1010</PostalCode>
+                     <CountryName>VE</CountryName>
+                  </PostalAddress>
+               </PostalAddresses>
+               <ElectronicAddress>
+                  <URI xml:lang="en">mailto:atencionalciudadano@suscerte.gob.ve</URI>
+                  <URI xml:lang="en">http://www.suscerte.gob.ve</URI>
+               </ElectronicAddress>
+            </TSPAddress>
+            <TSPInformationURI>
+               <URI xml:lang="en">http://www.suscerte.gob.ve/dpc</URI>
+               <URI xml:lang="en">http://www.suscerte.gob.ve</URI>
+               <URI xml:lang="es">http://www.suscerte.gob.ve/dpc</URI>
+               <URI xml:lang="es">http://www.suscerte.gob.ve</URI>
+            </TSPInformationURI>
+         </TSPInformation>
+         <TSPServices>
+            <TSPService>
+               <ServiceInformation>
+                  <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/CA/QC</ServiceTypeIdentifier>
+                  <ServiceName>
+                     <Name xml:lang="en">Autoridad de Certificacion Raiz del Estado Venezolano</Name>
+                     <Name xml:lang="es">Autoridad de Certificacion Raiz del Estado Venezolano</Name>
+                  </ServiceName>
+                  <ServiceDigitalIdentity>
+                     <DigitalId>
+                        <X509Certificate>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</X509Certificate>
+                     </DigitalId>
+                     <DigitalId>
+                        <X509SubjectName>CN=Autoridad de Certificacion Raiz del Estado Venezolano, C=VE, L=Caracas, ST=Distrito Capital, O=Sistema Nacional de Certificacion Electronica, OU=Superintendencia de Servicios de Certificacion Electronica/emailAddress=acraiz@suscerte.gob.ve</X509SubjectName>
+                     </DigitalId>
+                  </ServiceDigitalIdentity>
+                  <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/setbynationallaw</ServiceStatus>
+                  <StatusStartingTime>2010-12-28T16:41:36Z</StatusStartingTime>
+                  <TSPServiceDefinitionURI>
+                     <URI xml:lang="en">http://acraiz.suscerte.gob.ve/sites/default/files/dpc/DPC_AC_RAIZ_V3.3.pdf</URI>
+                     <URI xml:lang="es">http://acraiz.suscerte.gob.ve/sites/default/files/dpc/DPC_AC_RAIZ_V3.3.pdf</URI>
+                  </TSPServiceDefinitionURI>
+                  <ServiceInformationExtensions>
+                     <Extension Critical="true">
+                        <ns5:Qualifications>
+                           <ns5:QualificationElement>
+                              <ns5:Qualifiers>
+                                 <ns5:Qualifier uri="http://uri.etsi.org/TrstSvc/TrustedList/SvcInfoExt/QCWithSSCD" />
+                              </ns5:Qualifiers>
+                              <ns5:CriteriaList assert="all">
+                                 <ns5:KeyUsage>
+                                    <ns5:KeyUsageBit name="keyCertSign">true</ns5:KeyUsageBit>
+                                 </ns5:KeyUsage>
+                                 <ns5:KeyUsage>
+                                    <ns5:KeyUsageBit name="crlSign">true</ns5:KeyUsageBit>
+                                 </ns5:KeyUsage>
+                                 <ns5:Description> This service issues qualified certificates for certificate authorities</ns5:Description>
+                              </ns5:CriteriaList>
+                           </ns5:QualificationElement>
+                        </ns5:Qualifications>
+                     </Extension>
+		     <Extension Critical="true">
+			<AdditionalServiceInformation>
+				<URI xml:lang="en">http://uri.etsi.org/TrstSvc/TrustedList/SvcInfoExt/RootCA-QC</URI>
+			</AdditionalServiceInformation>
+		     </Extension>
+                  </ServiceInformationExtensions>
+               </ServiceInformation>
+            </TSPService>
+            <TSPService>
+               <ServiceInformation>
+                  <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/CA/QC</ServiceTypeIdentifier>
+                  <ServiceName>
+                     <Name xml:lang="en">PSC Publico del MppCTII para el Estado Venezolano</Name>
+                  </ServiceName>
+                  <ServiceDigitalIdentity>
+                     <DigitalId>
+                        <X509Certificate>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</X509Certificate>
+                     </DigitalId>
+                     <DigitalId>
+                        <X509SubjectName>C=VE, ST=Miranda, L=Baruta, O=Sistema Nacional de Certificacion Electronica, OU=Fundacion Instituto de Ingenieria, CN=PSC Publico del MppCTII para el Estado Venezolano/emailAddress=admin-pki@fii.gob.ve</X509SubjectName>
+                     </DigitalId>
+                  </ServiceDigitalIdentity>
+                  <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/undersupervision</ServiceStatus>
+                  <StatusStartingTime>2011-01-25T16:10:00Z</StatusStartingTime>
+                  <TSPServiceDefinitionURI>
+                     <URI xml:lang="en"> http://www.suscerte.gob.ve/dpc</URI>
+                     <URI xml:lang="es"> http://www.suscerte.gob.ve/dpc</URI>
+                  </TSPServiceDefinitionURI>
+                  <ServiceInformationExtensions>
+                     <Extension Critical="true">
+                        <ns5:Qualifications>
+                           <ns5:QualificationElement>
+                              <ns5:Qualifiers>
+                                 <ns5:Qualifier uri="http://uri.etsi.org/TrstSvc/TrustedList/SvcInfoExt/QCWithSSCD" />
+                              </ns5:Qualifiers>
+                              <ns5:CriteriaList assert="atLeastOne">
+                                 <ns5:KeyUsage>
+                                    <ns5:KeyUsageBit name="digitalSignature">true</ns5:KeyUsageBit>
+                                 </ns5:KeyUsage>
+                                 <ns5:KeyUsage>
+                                    <ns5:KeyUsageBit name="nonRepudiation">true</ns5:KeyUsageBit>
+                                 </ns5:KeyUsage>
+                                 <ns5:Description> This service issues qualified certificates for e-signing and e-authentication within the same process.</ns5:Description>
+                              </ns5:CriteriaList>
+                           </ns5:QualificationElement>
+                        </ns5:Qualifications>
+                     </Extension>
+                  </ServiceInformationExtensions>
+               </ServiceInformation>
+            </TSPService>
+            <TSPService>
+               <ServiceInformation>
+                  <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/CA/QC</ServiceTypeIdentifier>
+                  <ServiceName>
+                     <Name xml:lang="en">AC Subordinada de tercer nivel de FUNDAYACUCHO</Name>
+                  </ServiceName>
+                  <ServiceDigitalIdentity>
+                     <DigitalId>
+                        <X509Certificate>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</X509Certificate>
+                     </DigitalId>
+                     <DigitalId>
+                        <X509SubjectName>C=VE, O=Sistema Nacional de Certificacion Electronica, OU=FUNDAYACUCHO, ST=Miranda, L=La Urbina, CN=AC Subordinada de tercer nivel de FUNDAYACUCHO</X509SubjectName>
+                     </DigitalId>
+                  </ServiceDigitalIdentity>
+                  <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/undersupervision</ServiceStatus>
+                  <StatusStartingTime>2012-09-14T19:19:22Z</StatusStartingTime>
+                  <TSPServiceDefinitionURI>
+                     <URI xml:lang="en">http://publicador-psc.fii.gob.ve/pc</URI>
+                     <URI xml:lang="es">http://publicador-psc.fii.gob.ve/pc</URI>
+                  </TSPServiceDefinitionURI>
+                  <ServiceInformationExtensions>
+                     <Extension Critical="true">
+                        <ns5:Qualifications>
+                           <ns5:QualificationElement>
+                              <ns5:Qualifiers>
+                                 <ns5:Qualifier uri="http://uri.etsi.org/TrstSvc/TrustedList/SvcInfoExt/QCWithSSCD" />
+                              </ns5:Qualifiers>
+                              <ns5:CriteriaList assert="atLeastOne">
+                                 <ns5:KeyUsage>
+                                    <ns5:KeyUsageBit name="digitalSignature">true</ns5:KeyUsageBit>
+                                 </ns5:KeyUsage>
+                                 <ns5:KeyUsage>
+                                    <ns5:KeyUsageBit name="nonRepudiation">true</ns5:KeyUsageBit>
+                                 </ns5:KeyUsage>
+                                 <ns5:Description>This service issues qualified certificates for e-signing and e-authentication within the same process</ns5:Description>
+                              </ns5:CriteriaList>
+                           </ns5:QualificationElement>
+                        </ns5:Qualifications>
+                     </Extension>
+                  </ServiceInformationExtensions>
+               </ServiceInformation>
+            </TSPService>
+            <TSPService>
+               <ServiceInformation>
+                  <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/CA/QC</ServiceTypeIdentifier>
+                  <ServiceName>
+                     <Name xml:lang="en">PSCProcert</Name>
+                  </ServiceName>
+                  <ServiceDigitalIdentity>
+                     <DigitalId>
+                        <X509Certificate>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</X509Certificate>
+                     </DigitalId>
+                     <DigitalId>
+                        <X509SubjectName>emailAddress=contacto@procert.net.ve, L=Chacao, ST=Miranda, OU=Proveedor de Certificados PROCERT, O=Sistema Nacional de Certificacion Electronica, C=VE, CN=PSCProcert</X509SubjectName>
+                     </DigitalId>
+                  </ServiceDigitalIdentity>
+                  <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/undersupervision</ServiceStatus>
+                  <StatusStartingTime>2010-12-28T16:51:00Z</StatusStartingTime>
+                  <TSPServiceDefinitionURI>
+                     <URI xml:lang="en">http://www.suscerte.gob.ve/dpc</URI>
+                     <URI xml:lang="es">http://www.suscerte.gob.ve/dpc</URI>
+                  </TSPServiceDefinitionURI>
+                  <ServiceInformationExtensions>
+                     <Extension Critical="true">
+                        <ns5:Qualifications>
+                           <ns5:QualificationElement>
+                              <ns5:Qualifiers>
+                                 <ns5:Qualifier uri="http://uri.etsi.org/TrstSvc/TrustedList/SvcInfoExt/QCWithSSCD" />
+                              </ns5:Qualifiers>
+                              <ns5:CriteriaList assert="atLeastOne">
+                                 <ns5:KeyUsage>
+                                    <ns5:KeyUsageBit name="digitalSignature">true</ns5:KeyUsageBit>
+                                 </ns5:KeyUsage>
+                                 <ns5:KeyUsage>
+                                    <ns5:KeyUsageBit name="nonRepudiation">true</ns5:KeyUsageBit>
+                                 </ns5:KeyUsage>
+                                 <ns5:Description> This service issues qualified certificates for e-signing and e-authentication within the same process</ns5:Description>
+                              </ns5:CriteriaList>
+                           </ns5:QualificationElement>
+                        </ns5:Qualifications>
+                     </Extension>
+                  </ServiceInformationExtensions>
+               </ServiceInformation>
+            </TSPService>
+            <TSPService>
+               <ServiceInformation>
+                  <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/CA/QC</ServiceTypeIdentifier>
+                  <ServiceName>
+                     <Name xml:lang="en">AC ALTOS FUNCIONARIOS</Name>
+                  </ServiceName>
+                  <ServiceDigitalIdentity>
+                     <DigitalId>
+                        <X509Certificate>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</X509Certificate>
+                     </DigitalId>
+                     <DigitalId>
+                        <X509SubjectName>CN=AC ALTOS FUNCIONARIOS, C=VE, L=Caracas, ST=Distrito Capital, O=Sistema Nacional de Certificacion Electronica, OU=Superintendencia de Servicios de Certificacion Electronica/emailAddress=acaltosfunc@suscerte.gob.ve</X509SubjectName>
+                     </DigitalId>
+                  </ServiceDigitalIdentity>
+                  <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/undersupervision</ServiceStatus>
+                  <StatusStartingTime>2011-07-15T21:39:27Z</StatusStartingTime>
+                  <TSPServiceDefinitionURI>
+                     <URI xml:lang="et">http://www.suscerte.gob.ve/dpc</URI>
+                     <URI xml:lang="en">http://www.suscerte.gob.ve/dpc</URI>
+                  </TSPServiceDefinitionURI>
+                  <ServiceInformationExtensions>
+                     <Extension Critical="true">
+                        <ns5:Qualifications>
+                           <ns5:QualificationElement>
+                              <ns5:Qualifiers>
+                                 <ns5:Qualifier uri="http://uri.etsi.org/TrstSvc/TrustedList/SvcInfoExt/QCWithSSCD" />
+                              </ns5:Qualifiers>
+                              <ns5:CriteriaList assert="atLeastOne">
+                                 <ns5:KeyUsage>
+                                    <ns5:KeyUsageBit name="digitalSignature">true</ns5:KeyUsageBit>
+                                 </ns5:KeyUsage>
+                                 <ns5:KeyUsage>
+                                    <ns5:KeyUsageBit name="nonRepudiation">true</ns5:KeyUsageBit>
+                                 </ns5:KeyUsage>
+                                 <ns5:Description> This service issues qualified certificates for e-signing and e-authentication within the same process</ns5:Description>
+                              </ns5:CriteriaList>
+                           </ns5:QualificationElement>
+                        </ns5:Qualifications>
+                     </Extension>
+                  </ServiceInformationExtensions>
+               </ServiceInformation>
+            </TSPService>
+            <TSPService>
+               <ServiceInformation>
+                  <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/Certstatus/OCSP/QC</ServiceTypeIdentifier>
+                  <ServiceName>
+                     <Name xml:lang="en">ocsp.suscerte.gob.ve/emailAddress=acraiz@suscerte.gob.ve</Name>
+                  </ServiceName>
+                  <ServiceDigitalIdentity>
+                     <DigitalId>
+                        <X509Certificate>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</X509Certificate>
+                     </DigitalId>
+                     <DigitalId>
+                        <X509SubjectName>C=VE, ST=Distrito Capital, L=Caracas, O=Sistema Nacional de Certificacion Electronica, OU=Superintendencia de Servicios de Certificacion Electronica, CN=ocsp.suscerte.gob.ve/emailAddress=acraiz@suscerte.gob.ve</X509SubjectName>
+                     </DigitalId>
+                  </ServiceDigitalIdentity>
+                  <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/undersupervision</ServiceStatus>
+                  <StatusStartingTime>2012-09-12T19:02:05Z</StatusStartingTime>
+		  <ServiceSupplyPoints>
+			<ServiceSupplyPoint>http://ocsp.suscerte.gob.ve</ServiceSupplyPoint>
+		  </ServiceSupplyPoints>
+               </ServiceInformation>
+            </TSPService>
+            <TSPService>
+               <ServiceInformation>
+                  <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/Certstatus/OCSP/QC</ServiceTypeIdentifier>
+                  <ServiceName>
+                     <Name xml:lang="en">publicador-psc.fii.gob.ve:2560/ocsp/emailAddress=admin-pki@fii.gob.ve</Name>
+                  </ServiceName>
+                  <ServiceDigitalIdentity>
+                     <DigitalId>
+                        <X509Certificate>MIIJCzCCBvOgAwIBAgICI98wDQYJKoZIhvcNAQELBQAwgfUxCzAJBgNVBAYTAlZFMRAwDgYDVQQIEwdNaXJhbmRhMQ8wDQYDVQQHEwZCYXJ1dGExNjA0BgNVBAoTLVNpc3RlbWEgTmFjaW9uYWwgZGUgQ2VydGlmaWNhY2lvbiBFbGVjdHJvbmljYTEqMCgGA1UECxMhRnVuZGFjaW9uIEluc3RpdHV0byBkZSBJbmdlbmllcmlhMTowOAYDVQQDEzFQU0MgUHVibGljbyBkZWwgTXBwQ1RJSSBwYXJhIGVsIEVzdGFkbyBWZW5lem9sYW5vMSMwIQYJKoZIhvcNAQkBFhRhZG1pbi1wa2lAZmlpLmdvYi52ZTAeFw0xNTA0MjgyMjI0MjZaFw0xNjA0MjcyMjI0MjZaMIHnMQswCQYDVQQGEwJWRTE2MDQGA1UEChMtU2lzdGVtYSBOYWNpb25hbCBkZSBDZXJ0aWZpY2FjaW9uIEVsZWN0cm9uaWNhMSowKAYDVQQLEyFGdW5kYWNpb24gSW5zdGl0dXRvIGRlIEluZ2VuaWVyaWExEDAOBgNVBAgTB01pcmFuZGExDzANBgNVBAcTBkJhcnV0YTEsMCoGA1UEAxMjcHVibGljYWRvci1wc2MuZmlpLmdvYi52ZToyNTYwL29jc3AxIzAhBgkqhkiG9w0BCQEWFGFkbWluLXBraUBmaWkuZ29iLnZlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxHd65K2Bu/rm+sLS0QB6x36VNDXEfWlffwrnKXbjDgf2y87E2D4NscL8sszLjfmpWMg3j40hx5erOZWbbSXL8zQEu41Ek+SZgKjE41yk0VyiqAhvfgqVtsHPZDFDz6bfH3iobZB1U1MdgzxHh7UY5fHLpRKP1UHboMDmPg0fe1bJooORFyP8GxnUiHyOxifVmbx77cAa2+5jAbkWloAo6ja6RqitPCu7vqyqSEx1Z8ZpQVQz2DyCboSAZ6n30h6+Qdy/Pg8IGV5gZrwIgkSSHp4UjBs+Armi7K1BBgovdRhoTlfNmuSc0zD5blnEB27Qi+n8tt806krXD7NtDMMLrQIDAQABo4IDrzCCA6swCQYDVR0TBAIwADALBgNVHQ8EBAMCBeAwEwYDVR0lBAwwCgYIKwYBBQUHAwkwHQYDVR0OBBYEFL6okJgk3c8yK3imzm21lyikWs75MIIBUAYDVR0jBIIBRzCCAUOAFKqUmFsByBcYUCi19uFf+/yJXmmuoYIBJqSCASIwggEeMT4wPAYDVQQDEzVBdXRvcmlkYWQgZGUgQ2VydGlmaWNhY2lvbiBSYWl6IGRlbCBFc3RhZG8gVmVuZXpvbGFubzELMAkGA1UEBhMCVkUxEDAOBgNVBAcTB0NhcmFjYXMxGTAXBgNVBAgTEERpc3RyaXRvIENhcGl0YWwxNjA0BgNVBAoTLVNpc3RlbWEgTmFjaW9uYWwgZGUgQ2VydGlmaWNhY2lvbiBFbGVjdHJvbmljYTFDMEEGA1UECxM6U3VwZXJpbnRlbmRlbmNpYSBkZSBTZXJ2aWNpb3MgZGUgQ2VydGlmaWNhY2lvbiBFbGVjdHJvbmljYTElMCMGCSqGSIb3DQEJARYWYWNyYWl6QHN1c2NlcnRlLmdvYi52ZYIBDTBGBggrBgEFBQcBAQQ6MDgwNgYIKwYBBQUHMAGGKmh0dHA6Ly9wdWJsaWNhZG9yLXBzYy5maWkuZ29iLnZlOjI1NjAvb2NzcDCBgQYDVR0gBHoweDAHBgVghl4CBjBtBgZghl4CBwUwYzAwBggrBgEFBQcCARYkaHR0cDovL3B1YmxpY2Fkb3ItcHNjLmZpaS5nb2IudmUvZHBjMC8GCCsGAQUFBwIBFiNodHRwOi8vcHVibGljYWRvci1wc2MuZmlpLmdvYi52ZS9wYzCBwQYDVR0RBIG5MIG2oBoGBWCGXgIDoBEMD1JJRi1WLTIwMDA0NjUwM4cElrz2NYIZcHVibGljYWRvci1wc2MuZmlpLmdvYi52ZYIZcHVibGljYWRvci1wc2MuZmlpLmdvYi52ZaAZBgVghl4CBKAQDA5zZXJ2aWRvck90aGVyc6AfBgVghl4CBaAWDBRodHRwOi8vYXIuZmlpLmdvYi52ZaAgBgVghl4CBqAXDBVodHRwOi8vd3d3LmZpaS5nb2IudmUwMgYDVR0SBCswKYIKZmlpLmdvYi52ZaAbBgVghl4CCKASDBBSSUYtRy0yMDAwNDY1MC0zMEUGA1UdHwQ+MDwwOqA4oDaGNGh0dHA6Ly9wdWJsaWNhZG9yLXBzYy5maWkuZ29iLnZlL2NybHNoYTI1Ni9jYWNybC5jcmwwDQYJKoZIhvcNAQELBQADggIBADp3aMcRsPq/M2/KChglNi9imT89yNx24NCortn3lVduWfAHNTSR4O+UCC9EW3NbsbNjImLOWFzPmsFAZm4EJsob4Xwcdpkm5BGzXPh22dU6+XcfI0VMPVoy1lE81ECP00Fd2oOFivn3gkqTZoUMPRP389KVClZDdYx0hO421HjXJtdPc9Hdo2qUM5NL74dZZgKeRVG0xzWEQOw2yFpmSGjNkNBFYgz9fvP6Gexhfvy+m9BNAA1/igJhCAMqwG5BH9lq3UrZaoiM6SQslWRTy+riHw9mhOLAwmFqXUd60IS3nA8U40BEuR8AY+8Wek2scp9nq/88H0gJq4tTw9a5K9p6b5N2JdkA59JIc0CX8D6SZRNRS84PfV0dz1zMmWL1SMmhYM3He9cURlq3FIxXnB20d8YOoVVgVTI05PTweW26uJ/lleXOmX/2dSikJ2qUPTaDhUA/VGu2H9kuGYT2501d2LZ/vJ1BxxoNqzFVnm4f2JS7pX/y/U0pRnUVORYeZWLi6iZxDVZ1sobp1ahEg87R0Jr1aH536aJFDbIXEL0dy9EUatezCwD1Zihgar+WYFzNJTTUWYsW5qMkctZ02gnMPyfVrR01nBQ9Y3mEEhOfvBCVB1V05pUYeIgqEhudaG1rLTvpM4o/vw83/Gx8r1so1/l82ZLrIDsjsGOo1M+o</X509Certificate>
+                     </DigitalId>
+                     <DigitalId>
+                        <X509SubjectName>C=VE, O=Sistema Nacional de Certificacion Electronica, OU=Fundacion Instituto de Ingenieria, ST=Miranda, L=Baruta, CN=publicador-psc.fii.gob.ve:2560/ocsp/emailAddress=admin-pki@fii.gob.ve</X509SubjectName>
+                     </DigitalId>
+                  </ServiceDigitalIdentity>
+                  <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/undersupervision</ServiceStatus>
+                  <StatusStartingTime>2015-04-28T22:24:26Z</StatusStartingTime>
+                  <ServiceSupplyPoints>
+                     <ServiceSupplyPoint>http://publicador-psc.fii.gob.ve:2560/ocsp</ServiceSupplyPoint>
+                  </ServiceSupplyPoints>
+               </ServiceInformation>
+            </TSPService>
+         </TSPServices>
+      </TrustServiceProvider>
+   </TrustServiceProviderList>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" /><Reference URI="#VE0001"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" /></Transforms><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" /><DigestValue>32ngMdG4/+RmPIowftaFv/PdEKeUagOK/2E02DAlV7Q=</DigestValue></Reference></SignedInfo><SignatureValue>m6fX9Qp2CH7UQwQcaMup/Tb7A5GXtL7ColsHrw99Pv9rxCSlSigP5Nfj7iraLlObJkQfIL+BhHIUGBs8Xka/txAQAmukyeQGNEOoyubnjcEo/BB/Iuqf8AfHlUkUWmlvbZw9COaMNy+AfnKA8EWML+zjBzu03P5FJLnKScH04M5e1jhpKLmV8ob+EC6fVIrn1qKyCkA4ZgQuCXv09KJOha2KmB7iOvYgvhvf/ntnpGlbv9YJzPZhd8N16XTSHEuY4mj7ax5j7p307SAZGWhhJ0yugBoy/nTRYiHG1lerp0JyWtzXA2NsglZjX6/JuFskNrf+z1imZ6rROYnd6wzfQg==</SignatureValue><KeyInfo><X509Data><X509Certificate>MIIDwTCCAqmgAwIBAgIBATANBgkqhkiG9w0BAQsFADCBlTELMAkGA1UEBhMCVkUxDzANBgNVBAgTBk1lcmlkYTEPMA0GA1UEBxMGTWVyaWRhMREwDwYDVQQKEwhDRU5ESVRFTDETMBEGA1UECxMKRGVzYXJyb2xsbzESMBAGA1UEAxMJVFNMU2lnbmVyMSgwJgYJKoZIhvcNAQkBFhl0c2xzaWduZXJAY2VuZGl0ZWwuZ29iLnZlMB4XDTE1MDUyMjAwMDAwMFoXDTE4MDUyMTIzNTk1OVowgZUxCzAJBgNVBAYTAlZFMQ8wDQYDVQQIEwZNZXJpZGExDzANBgNVBAcTBk1lcmlkYTERMA8GA1UEChMIQ0VORElURUwxEzARBgNVBAsTCkRlc2Fycm9sbG8xEjAQBgNVBAMTCVRTTFNpZ25lcjEoMCYGCSqGSIb3DQEJARYZdHNsc2lnbmVyQGNlbmRpdGVsLmdvYi52ZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKk7HTfeWdwFTkBvLn2Pn3/9kPHPfl/UZmmFXlTyiIxd6zit4h3ziRHVVK6jU7ryXSCztouA1RTEHj+p6vsX/ivLhcqyjnl5psNNKxZopYypuWypZ4GApGOQ/6cg/9Qq3x4VRAy+Xhq97UGMRlG1/V0E4uk2KoePtcVFPttGIdc/8iV7pZYitHE1/XEy5+kQKEVYbEfQyJK9Y49XGL43NlOHAZH4JYXn3jM5AZ+qw7lMvXCBj0DrCdpUrj3pXJcfmm2zHGv3hEk/N+lh6MnvC7Hf1KDh2W7i5ayyZ21M18WoXxHVAs1OdZ2kj6WmAcu5oO+QqezjA7U6WBkhG/umCgECAwEAAaMaMBgwCQYDVR0TBAIwADALBgNVHQ8EBAMCBPAwDQYJKoZIhvcNAQELBQADggEBAC4W/A+3fPKVYDcWfl5O0FlYq3La18FEjxgh9YKEZftjTzTPbUFSa02qeKgm6mWrA11LtuHl/2niVIz5VW+M8TmN1/9XxZrKS71C7RxFIdt6a6GOCZZhhYrQk/kGF6fvTA+C8eNtwq993hzLwIUU3mXpSDEGddwQyRz3RvD24+9RR9qrFf+EWrOBNzGC1eUv6460oELrP1i+uGBInZw+VwcQeyzVwnK1flNXu03KxBS9RpgexyZu4pjvXjWS7x09blSwDAi7xD3eyCW/buApekhH8QnfTqBFb1JNzgLmDlGe8Okx+MRxQ+QTHaKqDHQHPDk634F2EHZK4ZZAm+VfVCA=</X509Certificate></X509Data></KeyInfo></Signature></TrustServiceStatusList>
