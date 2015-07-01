@@ -2150,12 +2150,74 @@ public class MurachiRESTWS {
 	}
 	
 	
+	@GET
+	@Path("/bdocs/archivos/{fileId}/{dataFileId}")
+	@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	public Response downloadDataFileFromBDOC(@PathParam("fileId")  String fileId, @PathParam("dataFileId")  int dataFileId) {
+		logger.info("/bdocs/archivos/"+fileId+"/"+Integer.toString(dataFileId));
+		
+		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + fileId; 
+		
+		Response response;
+		
+		// Retrieve the file
+	    File file = new File(fullPathBdocFile);
+	    if (file.exists()) {
+	    		    	
+	    	Security.addProvider(new BouncyCastleProvider());
+			Container container = null;
+			
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		
+			container = Container.open(fullPathBdocFile, configuration);
+			logger.debug("open container: "+ fullPathBdocFile);
+			
+			int dfSize = container.getDataFiles().size();
+			
+			if (dataFileId > dfSize-1)
+			{
+				// no existe el dataFile con el id pasado como argumento
+				response = Response.status(404).entity("{\"error\": \"el dataFileId solicitado no existe\"}").type("text/plain").build();
+				logger.error("el dataFileId solicitado: "+Integer.toString(dataFileId)+ " no existe.");	
+			}
+			else
+			{
+				// el dataFile es valido
+				DataFile df = container.getDataFile(dataFileId);
+				logger.debug("obtenido DataFile: "+Integer.toString(dataFileId));
+				
+				df.saveAs("/tmp/extraido.jpg");
+				logger.debug("obtenido DataFile: /tmp/extraido.jpg");
+				
+				File fileToDownload = new File("/tmp/extraido.jpg");
+				
+				ResponseBuilder builder = Response.ok(fileToDownload);
+		    	builder.header("Content-Disposition", "attachment; filename=" + fileToDownload.getName());
+		    	response = builder.build();
+				
+				
+				//response = Response.status(200).entity("{\"DataFileExist\": true}").type("text/plain").build();
+				
+			}
+			
+	    	
+	    	
+	    } else {
+	    	logger.error("El archivo con id: "+fileId+ " no existe.");
+	    	response = Response.status(404).entity("{\"fileExist\": false}").type("text/plain").build();
+	    }
+		
+		return response;
+	}
 	
 	
 	
 	
-	
-	
+	// ************************************************************************
+	// ************************************************************************
+	// ************************************************************************
 	
 	private static void verifyBdocContainer(Container container) {
 		logger.debug("verifyBdocContainer(Container container)");
