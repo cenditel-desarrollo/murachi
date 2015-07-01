@@ -995,7 +995,7 @@ public class MurachiRESTWS {
 	 *  "location":"location",
 	 *  "contact":"contact"
 	 *  }
-	 * 
+	 *
 	 * 
 	 * @param presignPar JSON con los parametros de preparacion: Id del archivo y certificado
 	 * firmante
@@ -1014,6 +1014,16 @@ public class MurachiRESTWS {
 	 *  "location":"location",
 	 *  "contact":"contact"
 	 *  }
+	 *  
+	 *  fileId: corresponde al identificador del archivo que se encuentra en el servidor y se desea firmar.
+	 *  
+	 *  certificate: corresponde al certificado del firmante en formato hexadecimal.
+	 *  
+	 *  reason: corresponde a la razón de la firma (cadena descriptiva del por qué de la firma).
+	 *  
+	 *  location: corresponde a la ubicación donde se realiza la firma.
+	 *  
+	 *  contact: corresponde a información de contacto del firmante.
 	 * 
 	 * @apiSuccess {String} hash Reseña o hash del archivo que se debe cifrar con la clave privada protegida por el
 	 * dispositivo criptográfico.
@@ -1788,6 +1798,103 @@ public class MurachiRESTWS {
 	}
 	
 	
+	/**
+	 * Ejecuta el proceso de presign o preparacion de firma de un archivo en formato BDOC.
+	 * 
+	 * Estructura del JSON que recibe la funcion:
+	 * 
+	 * 	{"fileId":"file_id",
+	 *	"certificate":"hex_cert_value",
+	 *  "city":"ciudad",
+	 *  "state":"estado",
+	 *  "postalCode":"codigoPostal",
+	 *  "country":"pais",
+	 *  "role":"rol",
+	 *  "addSignature":true/false
+	 *  }
+	 * 
+	 * 
+	 * @param presignPar JSON con los parametros de preparacion: Id del archivo, certificado, ciudad, estado, codigoPostal, país, rol.
+	 * 
+	 * @param req objeto request para crear una sesion y mantener elementos del BDOC
+	 *  en la misma.
+	 * 
+	 * @throws MurachiException 
+	 * 
+	 * @api {post} /Murachi/0.1/archivos/firmados/bdocs Prepara la firma de un archivo en formato BDOC.
+	 * @apiName BDocs
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * @apiDescription Prepara la firma de un archivo en formato BDOC. Se debe pasar un JSON con la siguiente estructura:
+	 *
+	 * {"fileId":"file_id", "certificate":"hex_cert_value", 
+	 * "city":"ciudad", "state":"estado", "postalCode":"codigoPostal", 
+	 * "country":"pais", "role":"rol", "addSignature":true/false
+	 * }
+	 *  
+	 *  fileId: corresponde al identificador del archivo que se encuentra en el servidor y se desea firmar.
+	 *  
+	 *  certificate: corresponde al certificado del firmante en formato hexadecimal.
+	 *  
+	 *  city: corresponde a la ciudad en la que se realiza la firma.
+	 *  
+	 *  state: corresponde al estado en el que se reailza la firma.
+	 *  
+	 *  postalCode: corresponde al código postal del lugar donde se realiza la firma.
+	 *  
+	 *  country: corresponde al país donde se realiza la firma.
+	 *  
+	 *  role: corresponde al rol del firmante.
+	 *  
+	 *  addSignature: true si se debe agregar una firma a un contenedor BDOC existente; false si se debe crear
+	 *  un contenedor nuevo para firmar.
+	 *
+	 * @apiSuccess {String} hash Reseña o hash del archivo que se debe cifrar con la clave privada protegida por el
+	 * dispositivo criptográfico.
+	 * 
+	 * @apiExample Example usage:
+	 * 
+	 * var parameters = JSON.stringify({
+	 *                             "fileId":fileId,
+	 *                             "certificate":cert.hex,
+	 *                             "city":"Merida",
+     *                             "state":"Merida",
+	 *                             "postalCode":"5101",
+	 *                             "country":"Venezuela",
+	 *                             "role":"Desarrollador",
+	 *                             "addSignature":true
+	 *                             });
+	 * 
+	 * $.ajax({
+     *           url: "https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs",
+     *           type: "post",
+     *           dataType: "json",
+     *           data: parameters,
+     *           contentType: "application/json",
+     *           success: function(data, textStatus, jqXHR){
+	 *                              var json_x = data;
+     *                              var hash = json_x['hash']; 
+     *                              alert("hash recibido del servidor "+hash);
+     *           },
+	 *           error: function(jqXHR, textStatus, errorThrown){
+	 *                              //alert('error: ' + textStatus);
+	 *                              //var responseText = jQuery.parseJSON(jqXHR.responseText);
+	 *                              alert('ajax error function: ' + jqXHR.responseText);
+	 *                             
+	 *           }
+     *  });
+	 *
+	 * 
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "hash": "",
+	 *       "error": "Error en el certificado del firmante"
+	 *     }
+	 * 
+	 * 
+	 */
 	@POST
 	@Path("/bdocs")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -1820,6 +1927,9 @@ public class MurachiRESTWS {
 		String role = presignPar.getRole();
 		logger.debug("role: " + role);
 		
+		Boolean addSignature = presignPar.getAddSignature();
+		logger.debug("addSignature: " + addSignature.toString());
+		
 		CertificateFactory cf;
 		X509Certificate signerCert;
 		
@@ -1843,60 +1953,68 @@ public class MurachiRESTWS {
 		
 		try
 		{
+			Security.addProvider(new BouncyCastleProvider());
+			Container container = null;
+		
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+		
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+		
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+	
+			// se debe agregar una firma al contenedor existente
+			if (addSignature)
+			{
+				container = Container.open(sourceFile, configuration);
+				logger.debug("open container: "+ sourceFile);
+			}
+			else // crear un contenedor nuevo 
+			{
+				container = Container.create(Container.DocumentType.BDOC, configuration);
+				logger.debug("container created");
+				container.addDataFile(sourceFile, sourceFileMimeType);
+				logger.debug("container addDataFile");
+			}
 			
 		
-		Security.addProvider(new BouncyCastleProvider());
-		Container container = null;
+			SignatureParameters signatureParameters = new SignatureParameters();
+			SignatureProductionPlace productionPlace = new SignatureProductionPlace();
+			productionPlace.setCity(city);
+			productionPlace.setStateOrProvince(state);
+			productionPlace.setPostalCode(postalCode);
+			productionPlace.setCountry(country);
+			signatureParameters.setProductionPlace(productionPlace);
+			logger.debug("container setProductionPlace");
+			signatureParameters.setRoles(asList(role));
+			container.setSignatureParameters(signatureParameters);
+			container.setSignatureProfile(SignatureProfile.B_BES);
 		
-		Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			
 		
-		configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			cf = CertificateFactory.getInstance("X.509");
 		
-		configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
-	
-		container = Container.create(Container.DocumentType.BDOC, configuration);
+			InputStream in = new ByteArrayInputStream(hexStringToByteArray(certHex));
 		
-		SignatureParameters signatureParameters = new SignatureParameters();
-	    SignatureProductionPlace productionPlace = new SignatureProductionPlace();
-	    productionPlace.setCity(city);
-	    productionPlace.setStateOrProvince(state);
-	    productionPlace.setPostalCode(postalCode);
-	    productionPlace.setCountry(country);
-	    signatureParameters.setProductionPlace(productionPlace);
-	    signatureParameters.setRoles(asList(role));
-	    container.setSignatureParameters(signatureParameters);
-	    container.setSignatureProfile(SignatureProfile.B_BES);
+			signerCert = (X509Certificate) cf.generateCertificate(in);
 		
-		container.addDataFile(sourceFile, sourceFileMimeType);
+			signedInfo = container.prepareSigning(signerCert);
 		
-		cf = CertificateFactory.getInstance("X.509");
+			hashToSign = byteArrayToHexString(signedInfo.getDigest());
 		
-		InputStream in = new ByteArrayInputStream(hexStringToByteArray(certHex));
+			System.out.println("presignBdoc - hash: " + hashToSign);
+			logger.debug("hash to sign: " + hashToSign);
 		
-		signerCert = (X509Certificate) cf.generateCertificate(in);
+			// establecer el nombre del archivo a serializar 
+			String serializedContainerId = sourceFile + "-serialized";
 		
-		signedInfo = container.prepareSigning(signerCert);
-		
-		hashToSign = byteArrayToHexString(signedInfo.getDigest());
-		//System.out.println("presignBdoc - hash: " + byteArrayToHexString(signedInfo.getDigest()));
-		System.out.println("presignBdoc - hash: " + hashToSign);
-		logger.debug("presignBdoc - hash: " + hashToSign);
-		
-		// establecer el nombre del archivo a serializar 
-		String serializedContainerId = sourceFile + "-serialized";
-		
-		// serializar el archivo 
-		serialize(container, serializedContainerId);
-		
-		
-		// almacenar los objetos necesarios para realizar el postsign en una sesion
-		HttpSession session = req.getSession(true);
-		session.setAttribute("hashToSign", hashToSign);				
-		session.setAttribute("fileId", fileId);
-		session.setAttribute("serializedContainerId", serializedContainerId);
-		
-		
-		
+			// serializar el archivo 
+			serialize(container, serializedContainerId);
+				
+			// almacenar los objetos necesarios para realizar el postsign en una sesion
+			HttpSession session = req.getSession(true);
+			session.setAttribute("hashToSign", hashToSign);				
+			session.setAttribute("fileId", fileId);
+			session.setAttribute("serializedContainerId", serializedContainerId);		
 		} catch(IOException e)
 		{
 			presignHash.setError(e.getMessage());
@@ -1913,17 +2031,63 @@ public class MurachiRESTWS {
 		// creacion del json
 		JSONObject jsonHash = new JSONObject();
 		jsonHash.put("hashToSign", hashToSign);
-					
-					
+
 		presignHash.setHash(hashToSign);
-		presignHash.setError("");
-		
+		presignHash.setError("");		
 		
 		logger.debug("presignBdoc: "+ presignHash.toString());
 		return Response.status(200).entity(presignHash).build();			
 	}
 	
 	
+	
+	/**
+	 * Ejecuta el proceso de postsign o completacion de firma de archivo en formato BDOC.
+	 * 
+	 * @param postsignPar JSON con los parametros de postsign: signature realizada a partir 
+	 * del hardware criptografico en el navegador.
+	 * 
+	 * @param req objeto request para crear una sesion y mantener elementos del 
+	 * BDOC en la misma.
+	 * 
+	 * @throws IOException 
+	 * @throws MurachiException 
+	 * 
+	 * 
+	 * @api {post} /Murachi/0.1/archivos/firmados/bdocs/resenas Completa la firma del archivo en formato BDOC.
+	 * @apiName BdocResenas
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * @apiDescription Completa la firma del archivo en formato BDOC. Recibe el hash cifrado del cliente y termina de completar la firma del
+	 * archivo en formato BDOC.
+	 * 
+	 * @apiSuccess {String} signedFileId Identificador único del archivo firmado en el servidor.
+	 * 
+	 * @apiExample Example usage:
+	 * 
+	 * $.ajax({
+     *           url: "https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/resenas",
+     *           type: "post",
+     *           dataType: "json",
+     *           data: JSON.stringify({"signature":signature.hex}),
+     *           contentType: "application/json",
+     *           success: function(data, textStatus, jqXHR){
+     *                              alert('Archivo firmado correctamente: ' + data['signedFileId']);
+     *           },
+	 *           error: function(jqXHR, textStatus, errorThrown){
+	 *                              alert('error en pdfs/resenas: ' + textStatus);
+	 *           }
+     *  });
+	 * 
+	 * 
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "Error en proceso de deserialización y completación de firma"
+	 *     }
+	 * 
+	 */
 	@POST
 	@Path("/bdocs/resenas")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -1944,8 +2108,7 @@ public class MurachiRESTWS {
 		logger.debug("fileId: " + fileId);
 		
 		String serializedContainerId = (String) session.getAttribute("serializedContainerId") + ".bin";
-		
-		
+				
 		System.out.println("serializedContainerId: " + serializedContainerId);
 		logger.debug("serializedContainerId: " + serializedContainerId);
 		
@@ -1958,16 +2121,13 @@ public class MurachiRESTWS {
 			
 			deserializedContainer.signRaw(signatureInBytes);
 			deserializedContainer.save(signedBdoc);
-			logger.debug("archivo firmado escrito en: " + signedBdoc);
-			
-			
-			
+			logger.debug("archivo firmado escrito en: " + signedBdoc);			
 		} catch (ClassNotFoundException e) {
 			//e.printStackTrace();
 			
 			JSONObject jsonError = new JSONObject();
 						
-			System.out.println("sgn == null");
+			System.out.println("ClassNotFoundException e: " + e.getMessage());
 			logger.error("error: " + e.getMessage());
 							
 			jsonError.put("error", e.getMessage());
@@ -1981,14 +2141,20 @@ public class MurachiRESTWS {
 			
 		PostsignMessage message = new PostsignMessage();
 		message.setMessage("{\"signedFile\":"+fileId + ".bdoc}");
-		
-		
+				
 		JSONObject jsonFinalResult = new JSONObject();
 		jsonFinalResult.put("signedFileId",fileId + ".bdoc");
 		
 		logger.info(jsonFinalResult.toString());
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	private static void verifyBdocContainer(Container container) {
@@ -2599,8 +2765,59 @@ public class MurachiRESTWS {
 		return "test";
 	}
 	
-	
-	
+	/**
+	 * Prueba de agregar una firma electrónica a un contenedor existente.
+	 * 
+	 * NOTA: A un contenedor que posee una firma no se le pueden agregar nuevos DataFiles.
+	 * @return
+	 */
+	@GET
+	@Path("/addsignaturebdoc/")
+	public String addSignatureBdoc() {
+		logger.debug("/addsignaturebdoc/");
+		
+		Security.addProvider(new BouncyCastleProvider());
+		
+		Configuration configuration = new Configuration(Configuration.Mode.PROD);
+		
+		configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+		
+		configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+				
+		//String bdocFile = "/tmp/c1d099ad-44b3-4227-82fa-8c8f03746787.bdoc";
+		String bdocFile = "/tmp/twoSignatures.bdoc";
+		
+		Container container = Container.open(bdocFile, configuration);
+		logger.debug("open container: "+ bdocFile);
+		
+	    SignatureParameters signatureParameters = new SignatureParameters();
+	    
+	    SignatureProductionPlace productionPlace = new SignatureProductionPlace();
+	    productionPlace.setCity("Merida");
+	    productionPlace.setStateOrProvince("Merida");
+	    productionPlace.setPostalCode("5101");
+	    productionPlace.setCountry("Venezuela");
+	    
+	    signatureParameters.setProductionPlace(productionPlace);
+	    
+	    signatureParameters.setRoles(asList("Desarrollador"));
+	    
+	    container.setSignatureParameters(signatureParameters);
+	    
+	    container.setSignatureProfile(SignatureProfile.B_BES);
+	    	    
+	    logger.debug("signing: "+ bdocFile);
+	    container.sign(new PKCS12Signer("/tmp/tibisay.p12", "123456".toCharArray()));
+
+	    String outputFile = "/tmp/threeSignatures.bdoc";
+	    container.save(outputFile);
+	    logger.debug("saved file in : "+ outputFile);
+	    
+	    ValidationResult result = container.validate();
+	    System.out.println(result.getReport());
+		
+		return "success";
+	}
 	
 	
 	/**

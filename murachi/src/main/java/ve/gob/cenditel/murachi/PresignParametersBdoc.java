@@ -24,6 +24,8 @@ public class PresignParametersBdoc {
 	
 	private String role;
 	
+	private Boolean addSignature;
+	
 	public String getFileId() {
 		return fileId;
 	}
@@ -78,5 +80,13 @@ public class PresignParametersBdoc {
 
 	public void setRole(String role) {
 		this.role = role;
+	}
+
+	public Boolean getAddSignature() {
+		return addSignature;
+	}
+
+	public void setAddSignature(Boolean addSignature) {
+		this.addSignature = addSignature;
 	}
 }
