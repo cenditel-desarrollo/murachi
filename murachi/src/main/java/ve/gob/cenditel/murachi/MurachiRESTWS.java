@@ -289,7 +289,7 @@ public class MurachiRESTWS {
 	 * @param fileName nombre (identificador) del archivo que se desea descargar
 	 * @return archivo existente en el servidor y pasado como argumento
 	 * 
-	 * @api {get} /Murachi/0.1/archivos/descargas/id Descarga un archivo 
+	 * @api {get} /Murachi/0.1/archivos/descargas/{id} Descarga un archivo 
 	 * @apidescription Descarga un archivo existente en el servidor
 	 * @apiName Descargas
 	 * @apiGroup Archivos
@@ -298,7 +298,7 @@ public class MurachiRESTWS {
 	 * @apiParam {String} id Identificador del archivo que se desea descargar.
 	 * 
 	 * @apiExample Example usage:
-     * curl -i http://murachi.cenditel.gob.ve/Murachi/0.1/archivos/descargas/xxx
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/descargas/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee
 	 * 	 
 	 * 
 	 * @apiErrorExample {json} Error-Response:
@@ -549,13 +549,14 @@ public class MurachiRESTWS {
 	 * @return JSON con informacion de las firmas
 	 * @throws MurachiException 
 	 * 
-	 * @api {get} /Murachi/0.1/archivos/id Verifica un archivo
+	 * @api {get} /Murachi/0.1/archivos/{idFile} Verifica un archivo
 	 * @apiName Verifica
 	 * @apiGroup Archivos
 	 * @apiVersion 0.1.0
 	 * @apiDescription Verificar el archivo y retorna un json con la información de las firma(s) electrónica(s)
 	 * en caso de estar firmado. 
 	 * 
+	 * @apiParam {String} idFile identificador del archivo que se encuentra en el servidor y se desea verificar.
 	 * 
 	 * @apiSuccess {String} fileId Identificador único del archivo en el servidor
 	 * @apiSuccess {Boolean} fileExist El archivo se cargó exitosamente en el servidor.
@@ -611,7 +612,7 @@ public class MurachiRESTWS {
 	 *  
 	 * 
 	 * @apiExample Example usage:
-     * curl -i http://murachi.cenditel.gob.ve/Murachi/0.1/archivos/id
+     * curl -i http://murachi.cenditel.gob.ve/Murachi/0.1/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee
 	 * 
 	 * @apiErrorExample {json} Error-Response:
 	 *     HTTP/1.1 404 Bad Request
@@ -2226,13 +2227,46 @@ public class MurachiRESTWS {
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
 	
-	
+	/**
+	 * Descarga un archivo que se encuentra dentro de un contenedor BDOC.
+	 * 
+	 * @param fileId identificador del contenedor BDOC que se encuentra en el servidor
+	 * @param dataFileId identificador del archivo que se desea descargar. Los archivos que
+	 * se encuentran dentro de un contenedor se comienzan a identificar con cero (0).
+	 * 
+	 * @return 
+	 * 
+	 * @api {get} /Murachi/0.1/archivos/bdocs/archivos/{fileId}/{dataFileId} Descarga un archivo del Contenedor 
+	 * @apidescription Descarga un archivo existente dentro del contenedor BDOC. Un contenedor BDOC puede tener uno
+	 * o varios archivos. Los identificadores de archivos dentro de un contenedor BDOC se comienzan e enumerar con
+	 * cero (0).
+	 * 
+	 * @apiName BDocsDescarga
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * 
+	 * @apiParam {String} fileId identificador del contenedor BDOC que se encuentra en el servidor
+	 * @apiParam {Number} dataFileId identificador del archivo que se desea descargar. Los archivos que
+	 * se encuentran dentro de un contenedor se comienzan a identificar con cero (0).
+	 * 
+	 * @apiExample Example usage:
+     * curl -i http://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee/0
+	 * 	 
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "fileExist": false
+	 *     }
+	 */
 	@GET
 	@Path("/bdocs/archivos/{fileId}/{dataFileId}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
 	public Response downloadDataFileFromBDOC(@PathParam("fileId")  String fileId, @PathParam("dataFileId")  int dataFileId) {
 		logger.info("/bdocs/archivos/"+fileId+"/"+Integer.toString(dataFileId));
 		
+		logger.debug("dataFileId: " + Integer.toString(dataFileId));
+				
 		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + fileId; 
 		
 		Response response;
@@ -2265,22 +2299,20 @@ public class MurachiRESTWS {
 				DataFile df = container.getDataFile(dataFileId);
 				logger.debug("obtenido DataFile: "+Integer.toString(dataFileId));
 				
-				df.saveAs("/tmp/extraido.jpg");
-				logger.debug("escrito DataFile: /tmp/extraido.jpg");
+				String name = df.getName();
+				String dfSaved = SERVER_UPLOAD_LOCATION_FOLDER+name; 
+
+				df.saveAs(dfSaved);
+				logger.debug("guradado DataFile: "+dfSaved);
 				
-				File fileToDownload = new File("/tmp/extraido.jpg");
+				File fileToDownload = new File(dfSaved);
 				
 				ResponseBuilder builder = Response.ok(fileToDownload);
 		    	builder.header("Content-Disposition", "attachment; filename=" + fileToDownload.getName());
 		    	response = builder.build();
 				
-				
-				//response = Response.status(200).entity("{\"DataFileExist\": true}").type("text/plain").build();
-				
 			}
-			
-	    	
-	    	
+				    	
 	    } else {
 	    	logger.error("El archivo con id: "+fileId+ " no existe.");
 	    	response = Response.status(404).entity("{\"fileExist\": false}").type("text/plain").build();
