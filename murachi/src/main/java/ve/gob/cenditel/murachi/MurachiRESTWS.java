@@ -166,7 +166,7 @@ public class MurachiRESTWS {
 	 * @apiVersion 0.1.0
 	 * 
 	 * @apiExample Example usage:
-     * curl -i http://murachi.cenditel.gob.ve/Murachi/0.1/archivos/version
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/version
 	 * 
 	 * @apiSuccess {String} murachiVersion Versión del API
 	 */
@@ -485,9 +485,9 @@ public class MurachiRESTWS {
 		String fileId = UUID.randomUUID().toString();
 		System.out.println(fileId);
 		
-		saveToDisk(uploadedInputStream, fileDetails, fileId);
-		
-		try {
+		try 
+		{
+			saveToDisk(uploadedInputStream, fileDetails, fileId);		
 			uploadedInputStream.close();
 		} catch (IOException e) {
 			logger.error("Ocurrio una excepcion: ", e);
@@ -518,7 +518,7 @@ public class MurachiRESTWS {
 		String uploadedFileLocation = SERVER_UPLOAD_LOCATION_FOLDER + /*fileDetails.getFileName()*/ fileId;
 		
 		System.out.println("uploadedFileLocation: " + uploadedFileLocation);
-		logger.debug("uploadedFileLocation: " + uploadedFileLocation);
+		logger.debug("saveToDisk: uploadedFileLocation: " + uploadedFileLocation);
 		
 		try {
 			OutputStream out = new FileOutputStream(new File(uploadedFileLocation));
@@ -534,7 +534,8 @@ public class MurachiRESTWS {
 			out.close();
 		}
 		catch(IOException e) {
-			logger.error("saveToDisk: ocurrio una excepcion", e);
+			logger.error("saveToDisk: ocurrio una excepcion" + e.getMessage());
+			
 			e.printStackTrace();
 			throw new MurachiException(e.getMessage());
 		}
@@ -612,7 +613,7 @@ public class MurachiRESTWS {
 	 *  
 	 * 
 	 * @apiExample Example usage:
-     * curl -i http://murachi.cenditel.gob.ve/Murachi/0.1/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee
 	 * 
 	 * @apiErrorExample {json} Error-Response:
 	 *     HTTP/1.1 404 Bad Request
@@ -2250,7 +2251,7 @@ public class MurachiRESTWS {
 	 * se encuentran dentro de un contenedor se comienzan a identificar con cero (0).
 	 * 
 	 * @apiExample Example usage:
-     * curl -i http://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee/0
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee/0
 	 * 	 
 	 * 
 	 * @apiErrorExample {json} Error-Response:
