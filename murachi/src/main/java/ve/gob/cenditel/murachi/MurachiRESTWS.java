@@ -289,7 +289,8 @@ public class MurachiRESTWS {
 	 * @param fileName nombre (identificador) del archivo que se desea descargar
 	 * @return archivo existente en el servidor y pasado como argumento
 	 * 
-	 * @api {get} /Murachi/0.1/archivos/descargas/id Descarga un archivo existente en el servidor 
+	 * @api {get} /Murachi/0.1/archivos/descargas/id Descarga un archivo 
+	 * @apidescription Descarga un archivo existente en el servidor
 	 * @apiName Descargas
 	 * @apiGroup Archivos
 	 * @apiVersion 0.1.0
@@ -542,10 +543,82 @@ public class MurachiRESTWS {
 	
 	/**
 	 * Verifica si un archivo posee firmas electronicas y retorna informacion
-	 * de las mismas en un json
+	 * de las mismas en un json.
+	 * 
 	 * @param idFile identificador del archivo a verificar
 	 * @return JSON con informacion de las firmas
 	 * @throws MurachiException 
+	 * 
+	 * @api {get} /Murachi/0.1/archivos/id Verifica un archivo
+	 * @apiName Verifica
+	 * @apiGroup Archivos
+	 * @apiVersion 0.1.0
+	 * @apiDescription Verificar el archivo y retorna un json con la información de las firma(s) electrónica(s)
+	 * en caso de estar firmado. 
+	 * 
+	 * 
+	 * @apiSuccess {String} fileId Identificador único del archivo en el servidor
+	 * @apiSuccess {Boolean} fileExist El archivo se cargó exitosamente en el servidor.
+	 * @apiSuccess {String} mimeType Tipo MIME del archivo verificado.
+	 * @apiSuccess {String} error Extension not supported. En caso de que el archivo sea diferente de PDF y BDOC.
+	 * 
+	 * @apiSuccess {Number} numberOfSignatures Número de firmas existentes en el archivo.
+	 * @apiSuccess {Object[]} signatures Lista de firmas.
+	 * @apiSuccess {String}   signatures.signatureType Tipo de firma de archivo PDF: approval 
+	 * @apiSuccess {String}   signatures.signedOn Fecha en que se realiza la firma.
+	 * @apiSuccess {Boolean}   signatures.integrityCheck Chequea la integridad de la firma. 
+	 * @apiSuccess {String}   signatures.timeStamp Estampilla de tiempo
+	 * @apiSuccess {String}   signatures.reason Razón de la firma.
+	 * @apiSuccess {String}   signatures.location Ubicación donde se realiza la firma.
+	 * @apiSuccess {String}   signatures.alternativeNameOfTheSigner Nombre alternativo del firmante. 
+	 * @apiSuccess {String}   signatures.signerCertificateValidFrom Fecha de inicio de validez del certificado.
+	 * @apiSuccess {Boolean}   signatures.signerCertificateStillValid El certificado todavía está válido.
+	 * @apiSuccess {Boolean}   signatures.signerCertificateHasExpired El certificado expiró.
+	 * @apiSuccess {Boolean}   signatures.signatureCoversWholeDocument La firma abarca todo el documento PDF.
+	 * @apiSuccess {String}   signatures.filterSubtype Tipo de subfiltro: /adbe.pkcs7.sha1, /adbe.pkcs7.detached. 
+	 * @apiSuccess {String}   signatures.signerCertificateSubject Sujeto firmante.
+	 * @apiSuccess {Boolean}   signatures.signerCertificateValidAtTimeOfSigning El certificado es válido en el momento de la firma. 
+	 * @apiSuccess {String}   signatures.encryptionAlgorithm Algoritmo de cifrado.
+	 * @apiSuccess {String}   signatures.timeStampService Servicio de estampillado de tiempo.
+	 * @apiSuccess {String}   signatures.digestAlgorithm Algoritmo hash (reseña).
+	 * @apiSuccess {Boolean}   signatures.certificatesVerifiedAgainstTheKeyStore Certificado verificado contra el repositorio de certificados confiables.
+	 * @apiSuccess {Number}   signatures.documentRevision Número de revisión del documento PDF.
+	 * @apiSuccess {String}   signatures.nameOfTheSigner Nombre del firmante.
+	 * @apiSuccess {Number}   signatures.totalDocumentRevisions Número total de revisiones del documento PDF.
+	 * @apiSuccess {String}   signatures.contactInfo Información de contacto del firmante.
+	 * @apiSuccess {Boolean}   signatures.timeStampVerified Estampilla de tiempo verificada. 
+	 * @apiSuccess {String}   signatures.signerCertificateIssuer Emisor del certificado firmante.
+	 * @apiSuccess {String}   signatures.signerCertificateValidTo Fecha de fin de validez del certificado.
+	 * @apiSuccess {String} signatures.signerCertificateSerial BDOC: Serial del certificado del firmante.
+	 * @apiSuccess {String} signatures.signatureProfile BDOC: Perfil de la firma.
+	 * @apiSuccess {String} signatures.signatureMethod BDOC: Algoritmo de firma utilizado.
+	 * @apiSuccess {String} signatures.signatureId BDOC: identificador de la firma.
+	 * @apiSuccess {String} signatures.signatureSigningTime BDOC: Hora y fecha en que se realiza la firma.
+	 * @apiSuccess {Boolean} signatures.signerCertificateIsValid BDOC: El certificado firmante es válido.
+	 * @apiSuccess {String} signatures.signerCertificateIssuer BDOC: Emisor del certificado firmante. 
+	 * @apiSuccess {String} signatures.signatureValidationException BDOC: Exepciones de la validación de la firma.
+	 * @apiSuccess {String} signatures.isValid BDOC: Firma electrónica válida.
+	 * @apiSuccess {String} signatures.signerCertificateSubjectName BDOC: Nombre del sujeto firmante. 
+	 *
+	 * @apiSuccess {Boolean}   containerValidation BDOC: Especifica si el contenedor posee una estructura válida.  
+	 * @apiSuccess {Number}   numberOfDataFiles BDOC: Cantidad de archivos incluidos en el contenedor BDOC.
+	 * @apiSuccess {Object[]} dataFiles BDOC: Lista de archivos incluidos en el contenedor.
+	 * @apiSuccess {String} dataFiles.name BDOC: Nombre del archivo incluido en el contenedor.
+	 * @apiSuccess {String} dataFiles.dataFileSize BDOC: Tamaño del archivo incluido en el contenedor.
+	 * @apiSuccess {String} dataFiles.filename BDOC: Nombre del archivo incluido en el contenedor.
+	 * @apiSuccess {String} dataFiles.mediaType BDOC: Tipo MIME del archivo incluido en el contenedor.
+	 * @apiSuccess {Object[]} signatures BDOC: Lista de firmas del contenedor BDOC
+	 *  
+	 * 
+	 * @apiExample Example usage:
+     * curl -i http://murachi.cenditel.gob.ve/Murachi/0.1/archivos/id
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 404 Bad Request
+	 *     {
+	 *       "fileExist": "false"
+	 *     }
+	 * 
 	 */
 	@GET
 	@Path("/{idFile}")
@@ -564,7 +637,9 @@ public class MurachiRESTWS {
 		if (!tmpFile.exists()) {
 			System.out.println("File : " + file + " does not exists.");
 			jsonObject.put("fileExist", "false");
-			logger.debug("fileExist: false");
+			logger.error("fileExist: false");
+			
+			return Response.status(404).entity(jsonObject.toString()).build();
 			
 		}else{
 			System.out.println("File : " + file + " exists.");
@@ -589,11 +664,12 @@ public class MurachiRESTWS {
 				System.out.println("extension no reconocida");
 				jsonObject.put("fileExist", "true");
 				jsonObject.put("error", "extension not supported");
-				logger.debug("error: extension not supported");
+				logger.error("error: extension not supported");
+				//return Response.status(500).entity(jsonObject.toString()).build();
 			}
 		}
 		String result = jsonObject.toString();
-		logger.info("/{"+idFile+"}: result");
+		logger.info("/{"+idFile+"}: "+ result);
 		return Response.status(200).entity(result).build();
 				
 	}
@@ -1361,6 +1437,7 @@ public class MurachiRESTWS {
 	
 	/**
 	 * Ejecuta el proceso de postsign o completacion de firma de documento pdf
+	 * 
 	 * @param postsignPar JSON con los parametros de postsign: signature realizada a partir 
 	 * del hardware criptografico en el navegador.
 	 * @param req objeto request para crear una sesion y mantener elementos del 
@@ -2189,7 +2266,7 @@ public class MurachiRESTWS {
 				logger.debug("obtenido DataFile: "+Integer.toString(dataFileId));
 				
 				df.saveAs("/tmp/extraido.jpg");
-				logger.debug("obtenido DataFile: /tmp/extraido.jpg");
+				logger.debug("escrito DataFile: /tmp/extraido.jpg");
 				
 				File fileToDownload = new File("/tmp/extraido.jpg");
 				
