@@ -20,6 +20,8 @@ public class PresignParameters {
 	
 	private String contact;
 	
+	private Boolean signatureVisible;
+	
 	public String getFileId() {
 		return fileId;
 	}
@@ -58,5 +60,13 @@ public class PresignParameters {
 
 	public void setContact(String contact) {
 		this.contact = contact;
+	}
+
+	public Boolean getSignatureVisible() {
+		return signatureVisible;
+	}
+
+	public void setSignatureVisible(Boolean signatureVisible) {
+		this.signatureVisible = signatureVisible;
 	}
 }

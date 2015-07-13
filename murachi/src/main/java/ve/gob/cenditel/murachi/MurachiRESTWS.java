@@ -1176,6 +1176,8 @@ public class MurachiRESTWS {
 		
 		String contact = presignPar.getContact();
 		
+		Boolean signatureVisible = presignPar.getSignatureVisible(); 
+		
 		
 		String pdf = SERVER_UPLOAD_LOCATION_FOLDER + fileId;
 		System.out.println("archivo a firmar: " + pdf);
@@ -1242,14 +1244,18 @@ public class MurachiRESTWS {
 	    	
 	    	//sap.setVisibleSignature(new Rectangle(36, 748, 144,780),1, "sig");
 	    	
-	    	if (!pdfAlreadySigned(reader)){
+	    	if (!pdfAlreadySigned(reader) && signatureVisible){
 	    		sap.setVisibleSignature(new Rectangle(36, 748, 144, 780),1, "sig1");
 			}else{
-				int idSig = numberOfSignatures(reader)+1;
-				//sap.setVisibleSignature(new Rectangle(36, 700, 144, 732),1, "sig"+Integer.toString(idSig));
-				sap.setVisibleSignature(
-						new Rectangle(36, (748-(numberOfSignatures(reader)*38)), 144, (780-(numberOfSignatures(reader)*38))),
-							1, "sig"+Integer.toString(idSig));
+				if (signatureVisible)
+				{
+					int idSig = numberOfSignatures(reader)+1;
+					//sap.setVisibleSignature(new Rectangle(36, 700, 144, 732),1, "sig"+Integer.toString(idSig));
+					sap.setVisibleSignature(
+							new Rectangle(36, (748-(numberOfSignatures(reader)*38)), 144, (780-(numberOfSignatures(reader)*38))),
+								1, "sig"+Integer.toString(idSig));	
+				}
+				
 			}
 	    	
 	    	sap.setCertificate(chain[0]);
