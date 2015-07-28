@@ -1090,7 +1090,8 @@ public class MurachiRESTWS {
 	 *	"certificate":"hex_cert_value",
 	 *  "reason":"reason",
 	 *  "location":"location",
-	 *  "contact":"contact"
+	 *  "contact":"contact",
+	 *  "signatureVisbile":"true"
 	 *  }
 	 *  
 	 *  fileId: corresponde al identificador del archivo que se encuentra en el servidor y se desea firmar.
@@ -1102,6 +1103,10 @@ public class MurachiRESTWS {
 	 *  location: corresponde a la ubicación donde se realiza la firma.
 	 *  
 	 *  contact: corresponde a información de contacto del firmante.
+	 *  
+	 *  signatureVisible: true para mostrar un indicador visible de firma en la primera página
+	 *  del documento pdf. false para no mostrar un indicador visible de firma en la primera página
+	 *  del documento pdf.
 	 * 
 	 * @apiSuccess {String} hash Reseña o hash del archivo que se debe cifrar con la clave privada protegida por el
 	 * dispositivo criptográfico.
@@ -1113,7 +1118,8 @@ public class MurachiRESTWS {
 	 *                             "certificate":cert.hex,
 	 *                             "reason":"prueba firma web",
 	 *                             "location":"Oficina",
-	 *                             "contact":"582746574336"
+	 *                             "contact":"582746574336",
+	 *                             "signatureVisible":"true"
 	 *                             });
 	 * 
 	 * $.ajax({
@@ -2328,7 +2334,203 @@ public class MurachiRESTWS {
 		return response;
 	}
 	
+	// ************************************************************************
+	// ************************************************************************
+	// ************************************************************************
+
+	// pruebas de funciones para gestionar un contenedor BDOC
 	
+	@GET
+	@Path("/pruebaBDOC")
+	@Produces("text/plain")
+	public String testBDOCFunctions()  {
+		
+		Security.addProvider(new BouncyCastleProvider());
+		
+		Container c = createBDOCContainer();
+		
+		String containerId = UUID.randomUUID().toString();
+		System.out.println(containerId);
+		
+		if (c==null)
+		{
+			System.out.println("container == null");
+		}
+		else
+		{
+			System.out.println("container != null");
+		}
+		
+		addFileToBDOCContainer("/tmp/slides-93-cfrg-9.pdf", c);
+		
+		System.out.println("numero de archivos en el contenedor: " + Integer.toString(c.getDataFiles().size()));
+		
+		PKCS12Signer PKCS12_SIGNER = new PKCS12Signer("/tmp/tibisay.p12", "123456".toCharArray());
+		
+		SignatureParameters signatureParameters = new SignatureParameters();
+		SignatureProductionPlace productionPlace = new SignatureProductionPlace();
+		productionPlace.setCity("Merida");
+		productionPlace.setStateOrProvince("Merida");
+		productionPlace.setPostalCode("5101");
+		productionPlace.setCountry("Venezuela");
+		signatureParameters.setProductionPlace(productionPlace);
+		logger.debug("container setProductionPlace");
+		signatureParameters.setRoles(asList("Desarrollador"));
+		c.setSignatureParameters(signatureParameters);
+		c.setSignatureProfile(SignatureProfile.B_BES);
+		
+		c.sign(PKCS12_SIGNER);
+		
+		
+		if (deleteDataFileFromBDOCContainer("/tmp/slides-93-cfrg-9.pdf", c))
+		{
+			System.out.println("eliminado archivo del contenedor");
+		}
+		else
+		{
+			System.out.println("NO se eliminó el archivo del contenedor");
+		}
+			
+		if (deleteSignatureFromBDOCContainer(0, c))
+		{
+			System.out.println("SE ELIMINO la firma 2");
+		}
+		else
+		{
+			System.out.println("no se pudo eliminar la firma 0");
+		}
+		
+		System.out.println("numero de firmas restantes: "+ Integer.toString(c.getSignatures().size()));
+		
+		c.save("/tmp/prueba.bdoc");
+		
+		return "prueba exitosa";
+	}
+	
+	
+	/**
+	 * Crea un contenedor BDOC 
+	 * @return contenedor BDOC creado
+	 */
+	private Container createBDOCContainer() {
+		logger.debug("createBDOCContainer() ");
+		System.out.println("createBDOCContainer()");
+		
+		Container container = null;
+		
+		Configuration configuration = new Configuration(Configuration.Mode.PROD);
+	
+		configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+	
+		configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+
+		
+		container = Container.create(Container.DocumentType.BDOC, configuration);
+		System.out.println("container created");
+		logger.debug("container created");
+				
+		return container;		
+	}
+	
+	/**
+	 * Agrega un archivo a un contendor BDOC existente
+	 * @param filePath ruta absoluta al archivo que se desea agregar
+	 * @param c contenedor BDOC al que se le desea agregar el archivo
+	 */
+	private void addFileToBDOCContainer(String filePath, Container c) {
+		logger.debug("addFileToBDOCContainer() ");
+		System.out.println("addFileToBDOCContainer()");
+		
+		String mime = getMimeTypeWithTika(filePath);
+		System.out.println("mimeType: " + mime);
+		
+		c.addDataFile(filePath, mime);
+		System.out.println("agregado archivo a contenedor");
+		
+	}
+	
+	/**
+	 * Elimina un archivo de un contenedor BDOC existente.
+	 * 
+	 * Se debe pasar la ruta absoluta del archivo que se desea eliminar
+	 * 
+	 * @param dataFile ruta absoluta del archivo que se desea eliminar
+	 * @param c contenedor BDOC del que se desea eliminar el archivo
+	 * @return si el archivo se elimino del contenedor
+	 */
+	private boolean deleteDataFileFromBDOCContainer(String dataFile, Container c) {
+		logger.debug("deleteDataFileFromBDOCContainer() ");
+		System.out.println("deleteDataFileFromBDOCContainer()");		
+		
+		boolean result = false;
+		
+		// si el contenedor esta firmado no se puede eliminar un archivo
+		if (c.getSignatures().size() > 0)
+		{
+			logger.debug("el contenedor esta firmado y no se puede eliminar el archivo: "+ dataFile);
+			System.out.println("el contenedor esta firmado y no se puede eliminar el archivo: "+ dataFile);
+			result = false;
+		}
+		else
+		{			
+			int files = c.getDataFiles().size();
+			System.out.println("numero de archivos en el contenedor: " + Integer.toString(files));
+			if (files == 0)
+			{
+				logger.debug("el contendor no posee archivos");
+				System.out.println("el contenedor no posee archivos");
+				result = false;
+			}
+			else
+			{				
+				c.removeDataFile(dataFile);
+				logger.debug("archivo eliminado del contenedor");
+				System.out.println("archivo eliminado del contenedor");
+				result = true;
+			}			
+		}
+		return result;
+	}
+	
+	/**
+	 * Elimina una firma del contendor BDOC.
+	 * 
+	 * @param signatureId id de la firma que se desea eliminar. Las firmas se enumeran de 0 en adelante.
+	 * @param c Contenedor para eliminar la firma
+	 * @return si se eliminó la firma del contenedor
+	 */
+	private boolean deleteSignatureFromBDOCContainer(int signatureId, Container c) {
+		logger.debug("deleteSignatureFromBDOCContainer() ");
+		System.out.println("deleteSignatureFromBDOCContainer()");		
+		
+		boolean result = false;
+		
+		// si el contenedor esta firmado no se puede eliminar un archivo
+		int signatures = c.getSignatures().size();
+		System.out.println("numero de firmas: "+ Integer.toString(signatures));
+		
+		if (signatures < 1)
+		{
+			logger.debug("el contenedor no esta firmado; no se elimina ninguna firma");
+			System.out.println("el contenedor no esta firmado; no se elimina ninguna firma");
+			result = false;
+		}
+		else
+		{			
+			if ((signatureId >= signatures) || (signatureId < 0))
+			{
+				logger.debug("el id de firma a eliminar no es valido.");
+				System.out.println("el id de firma a eliminar no es valido");
+				result = false;
+			}
+			else
+			{
+				c.removeSignature(signatureId);
+				result = true;
+			}			
+		}
+		return result;
+	}
 	
 	
 	// ************************************************************************
