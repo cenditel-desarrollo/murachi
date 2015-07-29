@@ -7,6 +7,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,6 +38,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.text.DateFormat;
@@ -58,7 +60,9 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.tsp.TimeStampToken;
+import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
+import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -2206,7 +2210,7 @@ public class MurachiRESTWS {
 		String signedBdoc = SERVER_UPLOAD_LOCATION_FOLDER + fileId + ".bdoc";
 		
 		try {
-			Container deserializedContainer = deserializer(serializedContainerId);
+			Container deserializedContainer = deserialize(serializedContainerId);
 			
 			byte[] signatureInBytes = hexStringToByteArray(signature);
 			
@@ -2334,6 +2338,157 @@ public class MurachiRESTWS {
 		return response;
 	}
 	
+	@POST
+	@Path("/bdocs/cargas")
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response uploadFilesToBDOC(FormDataMultiPart formParams) throws MurachiException {
+		
+		logger.info("/bdocs/cargas");
+		logger.debug("uploadFilesToBDOC...");
+		
+		// cadena con la respuesta
+		String result = "";
+		
+		System.out.println("uploadFilesToBDOC...");
+
+		Security.addProvider(new BouncyCastleProvider());		
+		Container c = createBDOCContainer();
+		
+		Map<String, List<FormDataBodyPart>> fieldsByName = formParams.getFields();
+		
+		for (List<FormDataBodyPart> fields : fieldsByName.values())
+	    {
+	        for (FormDataBodyPart field : fields)
+	        {
+	            InputStream is = field.getEntityAs(InputStream.class);
+	            
+	            FormDataContentDisposition file = field.getFormDataContentDisposition();	            
+	            String fileName = file.getFileName();
+	            String mimeType = field.getMediaType().toString();
+	            System.out.println("fileName " + fileName);	            
+	            System.out.println("mime " + mimeType);
+
+	            addFileToBDOCContainer(is, fileName, mimeType, c);
+	            	           
+	        }
+	    }
+		// se debe serializar no guardar
+		
+		String fileId = SERVER_UPLOAD_LOCATION_FOLDER + UUID.randomUUID().toString();
+		System.out.println("id contenedor serializado: "+fileId);
+		
+		// establecer el nombre del archivo a serializar 
+		String serializedContainerId = fileId + "-serialized";
+	
+		// serializar el archivo 
+		try {
+			serialize(c, serializedContainerId);
+		} catch (IOException e1) {
+			logger.error("error en la serializacion del contendor");
+			e1.printStackTrace();
+			
+			result = "error al serializar el archivo"+serializedContainerId;
+			result = "\"error\":\"no se pudo crear el contenedor\"";
+			return Response.status(500).entity(result).build();
+		}
+		result = "\"containerId\":\""+ serializedContainerId +"\"";
+		
+		
+		return Response.status(200).entity(result).build();
+	}
+	
+	@POST
+	@Path("/bdocs/cargas/{containerId}")
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response appendFilesToBDOC(FormDataMultiPart formParams, @PathParam("containerId")  String containerId) throws MurachiException {
+		
+		logger.info("/bdocs/cargas/{containerId}");
+		logger.debug("appendFilesToBDOC...");
+		
+		// cadena con la respuesta
+		String result = "";
+		// ruta del contenedor serializado
+		String serializedContainerId = "";
+				
+		System.out.println("appendFilesToBDOC...");
+		
+		System.out.println("containerId: "+ containerId);
+
+		String containerToOpen = SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bin";
+		
+		System.out.println("containerToOpen: "+ containerToOpen);
+
+		File f = new File(containerToOpen);
+		
+		if (!f.exists()) {
+			logger.error("el contenedor "+ containerToOpen + " no existe.");
+			result = "\"error\":\"el contenedor "+ containerId + " no existe\"";
+			return Response.status(404).entity(result).build();	
+		}
+		
+		try {
+			
+			Security.addProvider(new BouncyCastleProvider());		
+			
+			Container c;
+			
+			c = deserialize(containerToOpen);
+			
+			Map<String, List<FormDataBodyPart>> fieldsByName = formParams.getFields();
+			
+			for (List<FormDataBodyPart> fields : fieldsByName.values())
+		    {
+		        for (FormDataBodyPart field : fields)
+		        {
+		            InputStream is = field.getEntityAs(InputStream.class);
+		            
+		            FormDataContentDisposition file = field.getFormDataContentDisposition();	            
+		            String fileName = file.getFileName();
+		            String mimeType = field.getMediaType().toString();
+		            System.out.println("fileName " + fileName);	            
+		            System.out.println("mime " + mimeType);
+
+		            addFileToBDOCContainer(is, fileName, mimeType, c);	            	           
+		        }
+		    }
+			// se debe serializar no guardar
+					
+			String[] array = containerId.split("\\.bin");
+			
+			// establecer el nombre del archivo a serializar 
+			serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + array[0];
+			
+			serialize(c, serializedContainerId);
+			logger.debug("contenedor " + containerToOpen + " serializado.");
+			
+			
+		} catch (ClassNotFoundException e) {
+			logger.error("error ClassNotFoundException");
+			e.printStackTrace();
+		
+			result = "\"error\":\"no se pudo pudo agregar el archivo al contenedor\"";
+			e.printStackTrace();
+			return Response.status(500).entity(result).build();
+			
+		} catch (IOException e) {
+			logger.error("error en la serializacion del contenedor");
+			e.printStackTrace();
+			
+			result = "\"error\":\"no se pudo agregar el archivo al contenedor\"";
+			return Response.status(500).entity(result).build();
+		}
+
+		logger.debug("archivo agregado correctamente " + containerToOpen);
+		
+		result = "\"containerId\":\""+ serializedContainerId +"\"";		
+				
+		return Response.status(200).entity(result).build();
+	}
+	
+	
+	
 	// ************************************************************************
 	// ************************************************************************
 	// ************************************************************************
@@ -2433,6 +2588,30 @@ public class MurachiRESTWS {
 	}
 	
 	/**
+	 * Abre un contenedor BDOC
+	 * @param pathToContainer ruta absoluta al contenedor BDOC 
+	 * @return contenedor BDOC creado
+	 */
+	private Container openBDOCContainer(String pathToContainer) {
+		logger.debug("openBDOCContainer() ");
+		System.out.println("openBDOCContainer()");
+		
+		Container container = null;
+		
+		Configuration configuration = new Configuration(Configuration.Mode.PROD);	
+		configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+		configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+
+		container = Container.open(pathToContainer, configuration);
+		
+		System.out.println("container opened");
+		logger.debug("container "+ pathToContainer + " opened");
+				
+		return container;		
+	}
+	
+	
+	/**
 	 * Agrega un archivo a un contendor BDOC existente
 	 * @param filePath ruta absoluta al archivo que se desea agregar
 	 * @param c contenedor BDOC al que se le desea agregar el archivo
@@ -2448,6 +2627,16 @@ public class MurachiRESTWS {
 		System.out.println("agregado archivo a contenedor");
 		
 	}
+	
+	private void addFileToBDOCContainer(InputStream is, String fileName, String mimeType, Container c) {
+		logger.debug("addFileToBDOCContainer(InputStream) ");
+		System.out.println("addFileToBDOCContainer(InputStream)");
+		
+		
+		c.addDataFile(is, fileName, mimeType);
+		System.out.println("agregado archivo a contenedor");
+	}
+	
 	
 	/**
 	 * Elimina un archivo de un contenedor BDOC existente.
@@ -3200,6 +3389,7 @@ public class MurachiRESTWS {
 	}
 	
 	
+	
 	/**
 	 * Prueba de ejecucion de programa desde consola. Incompleta
 	 * @return
@@ -3210,7 +3400,14 @@ public class MurachiRESTWS {
 	@Produces("text/plain")
 	public String executeProcess() throws InterruptedException {
 		
+		String s = "9712f235-4dd4-4b09-957d-b06c33af482b-serialized.bin";
+		String[] array = s.split("-serialized\\.bin");
 		
+		return array[0];
+		
+		
+		
+		/*
 		String line = "";
 		OutputStream stdin = null;
 		InputStream stderr = null;
@@ -3241,6 +3438,7 @@ public class MurachiRESTWS {
 		}
 		System.out.print("...saliendo");
 		return line;
+		*/
 	}
 	
 	
@@ -3568,7 +3766,7 @@ public class MurachiRESTWS {
 	   * @throws IOException
 	   * @throws ClassNotFoundException
 	   */
-	  private static Container deserializer(String filePath) throws IOException, ClassNotFoundException {
+	  private static Container deserialize(String filePath) throws IOException, ClassNotFoundException {
 		  //FileInputStream fileIn = new FileInputStream("container.bin");
 		  FileInputStream fileIn = new FileInputStream(filePath);
 		  ObjectInputStream in = new ObjectInputStream(fileIn);
