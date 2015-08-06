@@ -12,12 +12,22 @@ public class PostsignParameters {
 	
 	private String signature;
 	
+	private String containerId;
+	
 	public String getSignature() {
 		return signature;
 	}
 	
 	public void setSignature(String sig) {
 		signature = sig;
+	}
+
+	public String getContainerId() {
+		return containerId;
+	}
+
+	public void setContainerId(String containerId) {
+		this.containerId = containerId;
 	}
 
 }

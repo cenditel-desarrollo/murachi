@@ -2245,6 +2245,158 @@ public class MurachiRESTWS {
 	}
 	
 	/**
+	 * Retorna el numero de dataFile que se encuentran en un contenedor
+	 * 
+	 * @param containerId
+	 * @return
+	 */
+	@GET
+	@Path("/bdocs/archivos/{containerId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getDataFileNumber(@PathParam("containerId")  String containerId) {
+		logger.info("/bdocs/archivos/"+containerId);
+								
+		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bin";
+		logger.debug(fullPathBdocFile);
+		
+		
+		JSONObject json = new JSONObject();
+		int dataFileNumber = 0;
+		
+		Response response;
+				
+		// Retrieve the file
+	    File file = new File(fullPathBdocFile);
+	    if (file.exists()) {
+	    		    	
+	    	Security.addProvider(new BouncyCastleProvider());
+						
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		
+			Container c;
+			
+			try {
+				c = deserialize(fullPathBdocFile);
+				
+				dataFileNumber = c.getDataFiles().size();
+				logger.debug("dataFileNumber: "+ Integer.toString(dataFileNumber));
+				json.put("dataFileNumber", Integer.toString(dataFileNumber));
+				
+				response = Response.status(200).entity(json.toString()).build();
+				
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				
+				json.put("error", "error interno al leer el contenedor");				
+				response = Response.status(500).entity(json.toString()).build();
+
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				json.put("error", "no se pudo leer el contenedor");				
+				response = Response.status(500).entity(json.toString()).build();
+			}										    	
+	    } else {
+	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
+	    	json.put("error", "El contenedor con id: "+containerId+ " no existe.");
+	    	response = Response.status(404).entity(json.toString()).build();
+	    }
+		return response;
+	}
+	
+	
+	/**
+	 * Retorna lista de los dataFile que se encuentran en un contenedor
+	 * 
+	 * @param containerId
+	 * @return lista de los dataFile que se encuentran en un contenedor
+	 */
+	@GET
+	@Path("/bdocs/archivos/lista/{containerId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getDataFileList(@PathParam("containerId")  String containerId) {
+	
+		
+		logger.info("/bdocs/archivos/lista/"+containerId);
+		
+		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bin";
+		logger.debug(fullPathBdocFile);
+		
+		JSONObject jsonDataFile = new JSONObject();
+		int dataFileNumber = 0;
+		
+		Response response = null;
+				
+		// Retrieve the file
+	    File file = new File(fullPathBdocFile);
+	    if (file.exists()) {
+	    		    	
+	    	Security.addProvider(new BouncyCastleProvider());
+						
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		
+			Container c;
+			String dataFileName = "";
+			Long dataFileSize = (long) 0;
+			
+			try {
+				c = deserialize(fullPathBdocFile);
+				
+				dataFileNumber = c.getDataFiles().size();
+								
+				if (dataFileNumber > 0)
+				{
+					for (int i=0; i<dataFileNumber; i++)
+					{
+						// el dataFile es valido
+						DataFile df = c.getDataFile(i);
+						dataFileName = df.getName();
+						dataFileSize = df.getFileSize();
+						logger.debug("obtenido DataFile: "+Integer.toString(i));
+						logger.debug("DataFile name: "+ dataFileName);
+						logger.debug("DataFile size: "+ Long.toString(dataFileSize));
+					}
+					jsonDataFile.put("dataFiles", getJSONFromBDOCDataFiles(c.getDataFiles()));
+					response = Response.status(200).entity(jsonDataFile.toString()).build();
+				}
+				else
+				{
+					logger.debug("dataFileNumber: "+ Integer.toString(dataFileNumber));
+					jsonDataFile.put("dataFileNumber", Integer.toString(dataFileNumber));
+					response = Response.status(200).entity(jsonDataFile.toString()).build();
+				}				
+				
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				
+				jsonDataFile.put("error", "error interno al leer el contenedor");				
+				response = Response.status(500).entity(jsonDataFile.toString()).build();
+
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				jsonDataFile.put("error", "no se pudo leer el contenedor");				
+				response = Response.status(500).entity(jsonDataFile.toString()).build();
+			}										    	
+	    } else {
+	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
+	    	jsonDataFile.put("error", "El contenedor con id: "+containerId+ " no existe.");
+	    	response = Response.status(404).entity(jsonDataFile.toString()).build();
+	    }
+		return response;
+	}
+	
+	
+	
+	
+	
+	/**
 	 * Descarga un archivo que se encuentra dentro de un contenedor BDOC.
 	 * 
 	 * @param fileId identificador del contenedor BDOC que se encuentra en el servidor
@@ -2277,14 +2429,14 @@ public class MurachiRESTWS {
 	 *     }
 	 */
 	@GET
-	@Path("/bdocs/archivos/{fileId}/{dataFileId}")
+	@Path("/bdocs/archivos/{containerId}/{dataFileId}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
-	public Response downloadDataFileFromBDOC(@PathParam("fileId")  String fileId, @PathParam("dataFileId")  int dataFileId) {
-		logger.info("/bdocs/archivos/"+fileId+"/"+Integer.toString(dataFileId));
+	public Response downloadDataFileFromBDOC(@PathParam("containerId")  String containerId, @PathParam("dataFileId")  int dataFileId) {
+		logger.info("/bdocs/archivos/"+containerId+"/"+Integer.toString(dataFileId));
 		
 		logger.debug("dataFileId: " + Integer.toString(dataFileId));
 				
-		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + fileId; 
+		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId; 
 		
 		Response response;
 		
@@ -2331,13 +2483,87 @@ public class MurachiRESTWS {
 			}
 				    	
 	    } else {
-	    	logger.error("El archivo con id: "+fileId+ " no existe.");
+	    	logger.error("El archivo con id: "+containerId+ " no existe.");
 	    	response = Response.status(404).entity("{\"fileExist\": false}").type("text/plain").build();
 	    }
 		
 		return response;
 	}
 	
+	
+	
+	/**
+	 * Retorna el numero de firmas que tiene en un contenedor
+	 * 
+	 * @param containerId
+	 * @return
+	 */
+	@GET
+	@Path("/bdocs/firmas/{containerId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getSignatureNumber(@PathParam("containerId")  String containerId) {
+		logger.info("/bdocs/archivos/"+containerId);
+								
+		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bin";
+		logger.debug(fullPathBdocFile);
+		
+		
+		JSONObject json = new JSONObject();
+		int signatureNumber = 0;
+		
+		Response response;
+				
+		// Retrieve the file
+	    File file = new File(fullPathBdocFile);
+	    if (file.exists()) {
+	    		    	
+	    	Security.addProvider(new BouncyCastleProvider());
+						
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		
+			Container c;
+			
+			try {
+				c = deserialize(fullPathBdocFile);
+				
+				signatureNumber = c.getSignatures().size();				
+				
+				logger.debug("signatureNumber: "+ Integer.toString(signatureNumber));
+				json.put("signatureNumber", Integer.toString(signatureNumber));
+				
+				response = Response.status(200).entity(json.toString()).build();
+				
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				
+				json.put("error", "error interno al leer el contenedor");				
+				response = Response.status(500).entity(json.toString()).build();
+
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				json.put("error", "no se pudo leer el contenedor");				
+				response = Response.status(500).entity(json.toString()).build();
+			}										    	
+	    } else {
+	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
+	    	json.put("error", "El contenedor con id: "+containerId+ " no existe.");
+	    	response = Response.status(404).entity(json.toString()).build();
+	    }
+		return response;		
+	}
+	
+	/**
+	 * Crea un contenedor BDOC con los archivos subidos del formulario, lo serializa y 
+	 * retorna el identificados unico del contenedor.
+	 * 
+	 * @param formParams parametros del formulario
+	 *  
+	 * @return  
+	 */
 	@POST
 	@Path("/bdocs/cargas")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
@@ -2375,11 +2601,11 @@ public class MurachiRESTWS {
 	    }
 		// se debe serializar no guardar
 		
-		String fileId = SERVER_UPLOAD_LOCATION_FOLDER + UUID.randomUUID().toString();
+		String fileId = UUID.randomUUID().toString();
 		System.out.println("id contenedor serializado: "+fileId);
 		
 		// establecer el nombre del archivo a serializar 
-		String serializedContainerId = fileId + "-serialized";
+		String serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + fileId + "-serialized";
 	
 		// serializar el archivo 
 		try {
@@ -2388,16 +2614,26 @@ public class MurachiRESTWS {
 			logger.error("error en la serializacion del contendor");
 			e1.printStackTrace();
 			
-			result = "error al serializar el archivo"+serializedContainerId;
+			result = "error al serializar el archivo"+fileId;
 			result = "\"error\":\"no se pudo crear el contenedor\"";
 			return Response.status(500).entity(result).build();
 		}
-		result = "\"containerId\":\""+ serializedContainerId +"\"";
+		result = "\"containerId\":\""+ fileId +"\"";
 		
 		
 		return Response.status(200).entity(result).build();
 	}
 	
+	/**
+	 * Recibe los archivos enviador a través del formulario, deserializa el contenedor identificado 
+	 * con containerId, agrega los archivos al contenedor, serializa de nuevo el contenedor y retorna
+	 * el identificador del contendor.
+	 * 
+	 * @param formParams parametros del formulario
+	 * @param containerId identificador del contenedor pasado en la URL
+	 *  
+	 * @return  
+	 */
 	@POST
 	@Path("/bdocs/cargas/{containerId}")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
@@ -2416,7 +2652,7 @@ public class MurachiRESTWS {
 		
 		System.out.println("containerId: "+ containerId);
 
-		String containerToOpen = SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bin";
+		String containerToOpen = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
 		
 		System.out.println("containerToOpen: "+ containerToOpen);
 
@@ -2458,7 +2694,7 @@ public class MurachiRESTWS {
 			String[] array = containerId.split("\\.bin");
 			
 			// establecer el nombre del archivo a serializar 
-			serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + array[0];
+			serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized";
 			
 			serialize(c, serializedContainerId);
 			logger.debug("contenedor " + containerToOpen + " serializado.");
@@ -2482,9 +2718,243 @@ public class MurachiRESTWS {
 
 		logger.debug("archivo agregado correctamente " + containerToOpen);
 		
-		result = "\"containerId\":\""+ serializedContainerId +"\"";		
+		result = "\"containerId\":\""+ containerId +"\"";		
 				
 		return Response.status(200).entity(result).build();
+	}
+	
+	
+	/**
+	 * Ejecuta la prefirma de un contenedor BDOC calculando el hash y enviandolo al cliente para que lo firme.
+	 * 
+	 * @param presignPar
+	 * @param req
+	 * @return
+	 * @throws MurachiException
+	 */
+	@POST
+	@Path("/bdocs/firmas/pre")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response presignBDOCContainer(PresignParametersBdoc presignPar) throws MurachiException {
+		
+		logger.info("/bdocs/firmas/pre");
+		
+		PresignHash presignHash = new PresignHash();
+
+		// obtener el id del archivo a firmaer
+		String containerId = presignPar.getFileId();
+		
+		// cadena con el certificado
+		String certHex = presignPar.getCertificate();
+		System.out.println("certificado en Hex: " + certHex);
+
+		String city = presignPar.getCity();
+		logger.debug("city: " + city);
+		
+		String state = presignPar.getState();
+		logger.debug("state: " + state);
+		
+		String postalCode = presignPar.getPostalCode();
+		logger.debug("postalCode: " + postalCode);
+		
+		String country = presignPar.getCountry();
+		logger.debug("country: " + country);
+		
+		String role = presignPar.getRole();
+		logger.debug("role: " + role);
+		
+		Boolean addSignature = presignPar.getAddSignature();
+		logger.debug("addSignature: " + addSignature.toString());
+		
+		CertificateFactory cf;
+		X509Certificate signerCert;
+		
+		// 
+		String hashToSign = "";
+		
+		String result = "";
+		
+		SignedInfo signedInfo;
+		
+		String fullPathContainerId = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
+		System.out.println("archivo a firmar: " + fullPathContainerId);
+		logger.debug("archivo a firmar: " + fullPathContainerId);
+		
+		String sourceFileMimeType = getMimeTypeWithTika(fullPathContainerId);
+		logger.debug("mimeType del archivo a firmar: " + sourceFileMimeType);
+		
+		certHex = presignPar.getCertificate();
+		System.out.println("certificado en Hex: " + certHex);
+		logger.debug("certificado firmante en Hex: " + certHex);
+		
+		File f = new File(fullPathContainerId);
+		
+		if (!f.exists()) {
+			logger.error("el contenedor "+ fullPathContainerId + " no existe.");
+			result = "\"error\":\"el contenedor "+ fullPathContainerId + " no existe\"";
+			return Response.status(404).entity(result).build();	
+		}
+				
+		try
+		{
+			Security.addProvider(new BouncyCastleProvider());
+			Container container = null;
+		
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+		
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+		
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+
+			// deserializar el contenedor
+			container = deserialize(fullPathContainerId);
+			logger.debug("deserializado el contenedor: " + fullPathContainerId);
+			
+			SignatureParameters signatureParameters = new SignatureParameters();
+			SignatureProductionPlace productionPlace = new SignatureProductionPlace();
+			productionPlace.setCity(city);
+			productionPlace.setStateOrProvince(state);
+			productionPlace.setPostalCode(postalCode);
+			productionPlace.setCountry(country);
+			signatureParameters.setProductionPlace(productionPlace);
+			logger.debug("container setProductionPlace");
+			
+			signatureParameters.setRoles(asList(role));
+			container.setSignatureParameters(signatureParameters);
+			container.setSignatureProfile(SignatureProfile.B_BES);
+				
+			cf = CertificateFactory.getInstance("X.509");
+		
+			InputStream in = new ByteArrayInputStream(hexStringToByteArray(certHex));
+		
+			signerCert = (X509Certificate) cf.generateCertificate(in);
+		
+			signedInfo = container.prepareSigning(signerCert);
+		
+			hashToSign = byteArrayToHexString(signedInfo.getDigest());
+		
+			System.out.println("presignBdoc - hash: " + hashToSign);
+			logger.debug("hash to sign: " + hashToSign);
+		
+			
+			String[] array = containerId.split("\\.bin");
+			
+			// establecer el nombre del archivo a serializar 
+			String serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized";
+			logger.debug("serializedContainerId: " + serializedContainerId);
+		
+			// serializar el archivo 
+			serialize(container, serializedContainerId);
+			logger.debug("serializado el contenedor: " + serializedContainerId);
+				
+		} catch(IOException e)
+		{
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+		} catch(CertificateException e)
+		{
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+		} catch (ClassNotFoundException e) {
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+		}
+		
+			
+			
+		// creacion del json
+		JSONObject jsonHash = new JSONObject();
+		jsonHash.put("hashToSign", hashToSign);
+
+		presignHash.setHash(hashToSign);
+		presignHash.setError("");		
+		
+		logger.debug("presignBDOCContainer: "+ presignHash.getHash());
+		return Response.status(200).entity(presignHash).build();			
+	}
+	
+	
+	
+	
+	@POST
+	@Path("/bdocs/firmas/post")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)	
+	public Response postsignBDOCContainer(PostsignParameters postsignPar) throws IOException, MurachiException {
+		
+		logger.info("/bdocs/resenas");
+
+		// cadena con la firma
+		String signature = postsignPar.getSignature();
+		System.out.println("firma en Hex: " + signature);
+		logger.info("firma en Hex: " + signature);
+		
+		// obtener el id del archivo a firmar
+		String containerId = postsignPar.getContainerId();
+		
+		/*
+		HttpSession session = req.getSession(false);
+		
+		String fileId = (String) session.getAttribute("fileId");
+		System.out.println("fileId: " + fileId);
+		logger.debug("fileId: " + fileId);
+		*/
+		
+		String signedBdoc = containerId + ".bdoc";
+		logger.debug("sigendBdoc: " + signedBdoc);
+		
+		String serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
+				
+		System.out.println("serializedContainerId: " + serializedContainerId);
+		logger.debug("serializedContainerId: " + serializedContainerId);
+		
+		try {
+			Container deserializedContainer = deserialize(serializedContainerId);
+			logger.debug("deserializado el contenedor");
+			
+			byte[] signatureInBytes = hexStringToByteArray(signature);
+			
+			deserializedContainer.signRaw(signatureInBytes);
+			logger.debug("asignada firma al contenedor");
+			
+			
+			deserializedContainer.save(SERVER_UPLOAD_LOCATION_FOLDER + signedBdoc);
+			logger.debug("guardado el contenedor: " + signedBdoc);
+			
+			//
+			File f = new File(serializedContainerId);
+			f.delete();
+			
+			logger.debug("archivo firmado escrito en: " + signedBdoc);			
+		} catch (ClassNotFoundException e) {
+			//e.printStackTrace();
+			
+			JSONObject jsonError = new JSONObject();
+						
+			System.out.println("ClassNotFoundException e: " + e.getMessage());
+			logger.error("error: " + e.getMessage());
+							
+			jsonError.put("error", e.getMessage());
+			return Response.status(500).entity(jsonError).build();				
+		}
+				
+		// en este punto el archivo bdoc debe estar disponible en la ruta
+		// SERVER_UPLOAD_LOCATION_FOLDER + fileId;		
+		System.out.println("Archivo firmado correctamente");
+		logger.debug("Archivo firmado correctamente");
+			
+		PostsignMessage message = new PostsignMessage();
+		message.setMessage("{\"signedFile\":"+ signedBdoc);
+				
+		JSONObject jsonFinalResult = new JSONObject();
+		jsonFinalResult.put("signedFileId", signedBdoc);
+		
+		logger.info(jsonFinalResult.toString());
+		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
 	
 	
@@ -2617,14 +3087,16 @@ public class MurachiRESTWS {
 	 * @param c contenedor BDOC al que se le desea agregar el archivo
 	 */
 	private void addFileToBDOCContainer(String filePath, Container c) {
+		
 		logger.debug("addFileToBDOCContainer() ");
 		System.out.println("addFileToBDOCContainer()");
-		
+		/*
 		String mime = getMimeTypeWithTika(filePath);
 		System.out.println("mimeType: " + mime);
 		
 		c.addDataFile(filePath, mime);
 		System.out.println("agregado archivo a contenedor");
+		*/
 		
 	}
 	
