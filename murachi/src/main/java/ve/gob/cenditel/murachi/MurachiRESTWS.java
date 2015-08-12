@@ -2256,14 +2256,25 @@ public class MurachiRESTWS {
 	public Response getDataFileNumber(@PathParam("containerId")  String containerId) {
 		logger.info("/bdocs/archivos/"+containerId);
 								
-		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bin";
-		logger.debug(fullPathBdocFile);
+		String fullPathBdocFile = "";
+		Boolean bdoc = false;
 		
-		
+		if (containerId.endsWith(".bdoc"))
+		{
+			fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId;
+			logger.debug(fullPathBdocFile);
+			bdoc = true;
+		}
+		else
+		{
+			fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
+			logger.debug(fullPathBdocFile);
+		}
+						
 		JSONObject json = new JSONObject();
 		int dataFileNumber = 0;
 		
-		Response response;
+		Response response = null;
 				
 		// Retrieve the file
 	    File file = new File(fullPathBdocFile);
@@ -2277,28 +2288,43 @@ public class MurachiRESTWS {
 		
 			Container c;
 			
-			try {
-				c = deserialize(fullPathBdocFile);
-				
+			if (bdoc)
+			{
+				c = Container.open(fullPathBdocFile, configuration);
+				logger.debug("open container: "+ fullPathBdocFile);
 				dataFileNumber = c.getDataFiles().size();
 				logger.debug("dataFileNumber: "+ Integer.toString(dataFileNumber));
 				json.put("dataFileNumber", Integer.toString(dataFileNumber));
 				
 				response = Response.status(200).entity(json.toString()).build();
-				
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				
-				json.put("error", "error interno al leer el contenedor");				
-				response = Response.status(500).entity(json.toString()).build();
+			}
+			else
+			{
+				try {
+					c = deserialize(fullPathBdocFile);
+					
+					dataFileNumber = c.getDataFiles().size();
+					logger.debug("dataFileNumber: "+ Integer.toString(dataFileNumber));
+					json.put("dataFileNumber", Integer.toString(dataFileNumber));
+					
+					response = Response.status(200).entity(json.toString()).build();
+					
+				} catch (ClassNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					
+					json.put("error", "error interno al leer el contenedor");				
+					response = Response.status(500).entity(json.toString()).build();
 
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				json.put("error", "no se pudo leer el contenedor");				
-				response = Response.status(500).entity(json.toString()).build();
-			}										    	
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					json.put("error", "no se pudo leer el contenedor");				
+					response = Response.status(500).entity(json.toString()).build();
+				}
+			}
+			
+										    	
 	    } else {
 	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
 	    	json.put("error", "El contenedor con id: "+containerId+ " no existe.");
@@ -2322,9 +2348,24 @@ public class MurachiRESTWS {
 		
 		logger.info("/bdocs/archivos/lista/"+containerId);
 		
-		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bin";
-		logger.debug(fullPathBdocFile);
+		//String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bin";
+		//logger.debug(fullPathBdocFile);
 		
+		String fullPathBdocFile = "";
+		Boolean bdoc = false;
+		
+		if (containerId.endsWith(".bdoc"))
+		{
+			fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId;
+			logger.debug(fullPathBdocFile);
+			bdoc = true;
+		}
+		else
+		{
+			fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
+			logger.debug(fullPathBdocFile);
+		}
+			
 		JSONObject jsonDataFile = new JSONObject();
 		int dataFileNumber = 0;
 		
@@ -2340,50 +2381,66 @@ public class MurachiRESTWS {
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 		
-			Container c;
+			Container c = null;
 			String dataFileName = "";
 			Long dataFileSize = (long) 0;
 			
-			try {
-				c = deserialize(fullPathBdocFile);
-				
-				dataFileNumber = c.getDataFiles().size();
-								
-				if (dataFileNumber > 0)
-				{
-					for (int i=0; i<dataFileNumber; i++)
-					{
-						// el dataFile es valido
-						DataFile df = c.getDataFile(i);
-						dataFileName = df.getName();
-						dataFileSize = df.getFileSize();
-						logger.debug("obtenido DataFile: "+Integer.toString(i));
-						logger.debug("DataFile name: "+ dataFileName);
-						logger.debug("DataFile size: "+ Long.toString(dataFileSize));
-					}
-					jsonDataFile.put("dataFiles", getJSONFromBDOCDataFiles(c.getDataFiles()));
-					response = Response.status(200).entity(jsonDataFile.toString()).build();
-				}
-				else
-				{
-					logger.debug("dataFileNumber: "+ Integer.toString(dataFileNumber));
-					jsonDataFile.put("dataFileNumber", Integer.toString(dataFileNumber));
-					response = Response.status(200).entity(jsonDataFile.toString()).build();
-				}				
-				
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				
-				jsonDataFile.put("error", "error interno al leer el contenedor");				
-				response = Response.status(500).entity(jsonDataFile.toString()).build();
+			
+			if (bdoc)
+			{
+				c = Container.open(fullPathBdocFile, configuration);		
+				logger.debug("contenedor abierto: " + fullPathBdocFile);
+			}
+			else
+			{
+				try {
+					c = deserialize(fullPathBdocFile);
+					logger.debug("contenedor deserializado: " + fullPathBdocFile);
+					
+				} catch (ClassNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					
+					jsonDataFile.put("error", "error interno al leer el contenedor");				
+					response = Response.status(500).entity(jsonDataFile.toString()).build();
+					return response;
 
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				jsonDataFile.put("error", "no se pudo leer el contenedor");				
-				response = Response.status(500).entity(jsonDataFile.toString()).build();
-			}										    	
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					jsonDataFile.put("error", "no se pudo leer el contenedor");				
+					response = Response.status(500).entity(jsonDataFile.toString()).build();
+					return response;
+				}
+				
+			}
+			
+			dataFileNumber = c.getDataFiles().size();
+			logger.debug("dataFileNumber: " + Integer.toString(dataFileNumber));
+			
+			if (dataFileNumber > 0)
+			{
+				for (int i=0; i<dataFileNumber; i++)
+				{
+					// el dataFile es valido
+					DataFile df = c.getDataFile(i);
+					dataFileName = df.getName();
+					dataFileSize = df.getFileSize();
+					logger.debug("obtenido DataFile: "+Integer.toString(i));
+					logger.debug("DataFile name: "+ dataFileName);
+					logger.debug("DataFile size: "+ Long.toString(dataFileSize));
+				}
+				jsonDataFile.put("dataFiles", getJSONFromBDOCDataFiles(c.getDataFiles()));
+				response = Response.status(200).entity(jsonDataFile.toString()).build();
+			}
+			else
+			{
+				logger.debug("dataFileNumber: "+ Integer.toString(dataFileNumber));
+				jsonDataFile.put("dataFileNumber", Integer.toString(dataFileNumber));
+				response = Response.status(200).entity(jsonDataFile.toString()).build();
+			}		
+			
+													    	
 	    } else {
 	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
 	    	jsonDataFile.put("error", "El contenedor con id: "+containerId+ " no existe.");
@@ -2451,8 +2508,28 @@ public class MurachiRESTWS {
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 		
-			container = Container.open(fullPathBdocFile, configuration);
-			logger.debug("open container: "+ fullPathBdocFile);
+			if (containerId.endsWith(".bdoc"))
+			{
+				container = Container.open(fullPathBdocFile, configuration);
+				logger.debug("open container: "+ fullPathBdocFile);
+			}
+			else
+			{
+				try {
+					container = deserialize(fullPathBdocFile + "-serialized.bin");
+				} catch (ClassNotFoundException e) {
+
+					//e.printStackTrace();
+					response = Response.status(500).entity("{\"error\": \"no se pudo leer el contenido del contenedor\"}").type("text/plain").build();
+					logger.error("no se pudo deserializar el contenedor para leer su contenido");
+				}
+				catch (IOException e) {
+
+					//e.printStackTrace();
+					response = Response.status(500).entity("{\"error\": \"no se pudo leer el contenido del contenedor\"}").type("text/plain").build();
+					logger.error("no se pudo deserializar el contenedor para leer su contenido");
+				}
+			}
 			
 			int dfSize = container.getDataFiles().size();
 			
