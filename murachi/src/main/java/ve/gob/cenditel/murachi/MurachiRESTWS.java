@@ -158,6 +158,16 @@ public class MurachiRESTWS {
 		return file.getAbsolutePath();		
 	}
 	
+	/**
+	 * Función para verificar si un archivo existe en el sistema de archivos
+	 * @param path ruta absoluta al archivo
+	 * @return si el archivo existe en el sistema de archivos
+	 */
+	public static boolean checkFileExists(String path)
+	{
+	    return new File(path).exists();
+	}
+	
 	
 	/**
 	 * Retorna la version del api del servicio
@@ -324,12 +334,13 @@ public class MurachiRESTWS {
 	 * @param fileName nombre o identificador del archivo que se desea descargar
 	 * @return archivo pasado como argumento del servidor
 	 */
+	/*
 	private Response downloadFileFromServer(String fileName) {    
 	    String fileLocation = SERVER_UPLOAD_LOCATION_FOLDER + fileName;
 	    Response response = null;
 	    NumberFormat myFormat = NumberFormat.getInstance();
-	      myFormat.setGroupingUsed(true);
-	     
+	    myFormat.setGroupingUsed(true);
+	    	     
 	    // Retrieve the file
 	    File file = new File(SERVER_UPLOAD_LOCATION_FOLDER + fileName);
 	    if (file.exists()) {
@@ -343,13 +354,79 @@ public class MurachiRESTWS {
 	    } else {
 	    	logger.error(String.format("Inside downloadFile==> FILE NOT FOUND: fileName: %s",
 	    			fileName));
-	       
-	    	//response = Response.status(404).entity("{\"fileExist\": " + /*fileLocation*/ fileName + "}").
-	    	//		type("text/plain").build();
+	       	    	
+	    	response = Response.status(404).entity("{\"fileExist\": false}").type("text/plain").build();
+	    }
+	      
+	    return response;
+	  }
+	*/
+	
+	private Response downloadFileFromServer(String fileName) {    
+		logger.info("downloadFileFromServer{"+fileName+"}");
+	    
+	    File file = null;
+	    
+	    Response response = null;
+	    
+	    
+	    ResponseBuilder builder = null;
+	    
+	    NumberFormat myFormat = NumberFormat.getInstance();
+	    myFormat.setGroupingUsed(true);
+	    	     
+	    // Retrieve the file
+	    
+	    if (checkFileExists(SERVER_UPLOAD_LOCATION_FOLDER + fileName + "-serialized.bin")) {
 	    	
+	    	logger.debug("	descarga de contenedor BDOC");
+	    	
+	    	try {				
+				Security.addProvider(new BouncyCastleProvider());						
+				Container c;
+			
+				// deserializar el contenedor 
+				c = deserialize(SERVER_UPLOAD_LOCATION_FOLDER + fileName + "-serialized.bin");
+			
+				// guardar el contenedor .bdoc
+				c.save(SERVER_UPLOAD_LOCATION_FOLDER + fileName + ".bdoc");
+				logger.debug("	contenedor " + SERVER_UPLOAD_LOCATION_FOLDER + fileName + ".bdoc escrito en sistema de archivos");
+				
+				file = new File(SERVER_UPLOAD_LOCATION_FOLDER + fileName + ".bdoc");
+				
+			} catch (ClassNotFoundException e) {
+				logger.error(" error ClassNotFoundException");
+							
+				return Response.status(500).entity("{\"error\": \"error al deserializar contenedor\"}").build();
+				
+			} catch (IOException e) {
+				logger.error("error en la serializacion del contenedor");
+				
+				return Response.status(500).entity("{\"error\": \"error al deserializar contenedor\"}").build();
+			}
+	    } 
+	    else if (checkFileExists(SERVER_UPLOAD_LOCATION_FOLDER + fileName)) 
+	    {
+	    	file = new File(SERVER_UPLOAD_LOCATION_FOLDER + fileName);
+	    	logger.debug("	descarga de archivo PDF");
+	    }
+	    else
+	    {
+	    	logger.error(String.format("Inside downloadFile==> FILE NOT FOUND: fileName: %s",
+	    			fileName));
+	       	    	
 	    	response = Response.status(404).entity("{\"fileExist\": false}").
 	    			type("text/plain").build();
 	    }
+	    
+	    builder = Response.ok(file);
+    	builder.header("Content-Disposition", "attachment; filename=" + file.getName());
+    	response = builder.build();
+       
+    	long file_size = file.length();
+    	logger.info(String.format("Inside downloadFile==> fileName: %s, fileSize: %s bytes",
+    			fileName, myFormat.format(file_size)));
+	    
 	      
 	    return response;
 	  }
@@ -2244,394 +2321,12 @@ public class MurachiRESTWS {
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
 	
-	/**
-	 * Retorna el numero de dataFile que se encuentran en un contenedor
-	 * 
-	 * @param containerId
-	 * @return
-	 */
-	@GET
-	@Path("/bdocs/archivos/{containerId}")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response getDataFileNumber(@PathParam("containerId")  String containerId) {
-		logger.info("/bdocs/archivos/"+containerId);
-								
-		String fullPathBdocFile = "";
-		Boolean bdoc = false;
-		
-		if (containerId.endsWith(".bdoc"))
-		{
-			fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId;
-			logger.debug(fullPathBdocFile);
-			bdoc = true;
-		}
-		else
-		{
-			fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
-			logger.debug(fullPathBdocFile);
-		}
-						
-		JSONObject json = new JSONObject();
-		int dataFileNumber = 0;
-		
-		Response response = null;
-				
-		// Retrieve the file
-	    File file = new File(fullPathBdocFile);
-	    if (file.exists()) {
-	    		    	
-	    	Security.addProvider(new BouncyCastleProvider());
-						
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
-			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
-			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
-		
-			Container c;
-			
-			if (bdoc)
-			{
-				c = Container.open(fullPathBdocFile, configuration);
-				logger.debug("open container: "+ fullPathBdocFile);
-				dataFileNumber = c.getDataFiles().size();
-				logger.debug("dataFileNumber: "+ Integer.toString(dataFileNumber));
-				json.put("dataFileNumber", Integer.toString(dataFileNumber));
-				
-				response = Response.status(200).entity(json.toString()).build();
-			}
-			else
-			{
-				try {
-					c = deserialize(fullPathBdocFile);
-					
-					dataFileNumber = c.getDataFiles().size();
-					logger.debug("dataFileNumber: "+ Integer.toString(dataFileNumber));
-					json.put("dataFileNumber", Integer.toString(dataFileNumber));
-					
-					response = Response.status(200).entity(json.toString()).build();
-					
-				} catch (ClassNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					
-					json.put("error", "error interno al leer el contenedor");				
-					response = Response.status(500).entity(json.toString()).build();
-
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					json.put("error", "no se pudo leer el contenedor");				
-					response = Response.status(500).entity(json.toString()).build();
-				}
-			}
-			
-										    	
-	    } else {
-	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
-	    	json.put("error", "El contenedor con id: "+containerId+ " no existe.");
-	    	response = Response.status(404).entity(json.toString()).build();
-	    }
-		return response;
-	}
+	// ********************************************************************************
+	// revision de recursos para que cada uno de ellos realice operaciones sobre un 
+	// contenendor BDOC y siempre finalice con el contenedor serializado en el sistema
+	// de archivos
 	
 	
-	/**
-	 * Retorna lista de los dataFile que se encuentran en un contenedor
-	 * 
-	 * @param containerId
-	 * @return lista de los dataFile que se encuentran en un contenedor
-	 */
-	@GET
-	@Path("/bdocs/archivos/lista/{containerId}")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response getDataFileList(@PathParam("containerId")  String containerId) {
-	
-		
-		logger.info("/bdocs/archivos/lista/"+containerId);
-		
-		//String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bin";
-		//logger.debug(fullPathBdocFile);
-		
-		String fullPathBdocFile = "";
-		Boolean bdoc = false;
-		
-		if (containerId.endsWith(".bdoc"))
-		{
-			fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId;
-			logger.debug(fullPathBdocFile);
-			bdoc = true;
-		}
-		else
-		{
-			fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
-			logger.debug(fullPathBdocFile);
-		}
-			
-		JSONObject jsonDataFile = new JSONObject();
-		int dataFileNumber = 0;
-		
-		Response response = null;
-				
-		// Retrieve the file
-	    File file = new File(fullPathBdocFile);
-	    if (file.exists()) {
-	    		    	
-	    	Security.addProvider(new BouncyCastleProvider());
-						
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
-			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
-			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
-		
-			Container c = null;
-			String dataFileName = "";
-			Long dataFileSize = (long) 0;
-			
-			
-			if (bdoc)
-			{
-				c = Container.open(fullPathBdocFile, configuration);		
-				logger.debug("contenedor abierto: " + fullPathBdocFile);
-			}
-			else
-			{
-				try {
-					c = deserialize(fullPathBdocFile);
-					logger.debug("contenedor deserializado: " + fullPathBdocFile);
-					
-				} catch (ClassNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					
-					jsonDataFile.put("error", "error interno al leer el contenedor");				
-					response = Response.status(500).entity(jsonDataFile.toString()).build();
-					return response;
-
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					jsonDataFile.put("error", "no se pudo leer el contenedor");				
-					response = Response.status(500).entity(jsonDataFile.toString()).build();
-					return response;
-				}
-				
-			}
-			
-			dataFileNumber = c.getDataFiles().size();
-			logger.debug("dataFileNumber: " + Integer.toString(dataFileNumber));
-			
-			if (dataFileNumber > 0)
-			{
-				for (int i=0; i<dataFileNumber; i++)
-				{
-					// el dataFile es valido
-					DataFile df = c.getDataFile(i);
-					dataFileName = df.getName();
-					dataFileSize = df.getFileSize();
-					logger.debug("obtenido DataFile: "+Integer.toString(i));
-					logger.debug("DataFile name: "+ dataFileName);
-					logger.debug("DataFile size: "+ Long.toString(dataFileSize));
-				}
-				jsonDataFile.put("dataFiles", getJSONFromBDOCDataFiles(c.getDataFiles()));
-				response = Response.status(200).entity(jsonDataFile.toString()).build();
-			}
-			else
-			{
-				logger.debug("dataFileNumber: "+ Integer.toString(dataFileNumber));
-				jsonDataFile.put("dataFileNumber", Integer.toString(dataFileNumber));
-				response = Response.status(200).entity(jsonDataFile.toString()).build();
-			}		
-			
-													    	
-	    } else {
-	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
-	    	jsonDataFile.put("error", "El contenedor con id: "+containerId+ " no existe.");
-	    	response = Response.status(404).entity(jsonDataFile.toString()).build();
-	    }
-		return response;
-	}
-	
-	
-	
-	
-	
-	/**
-	 * Descarga un archivo que se encuentra dentro de un contenedor BDOC.
-	 * 
-	 * @param fileId identificador del contenedor BDOC que se encuentra en el servidor
-	 * @param dataFileId identificador del archivo que se desea descargar. Los archivos que
-	 * se encuentran dentro de un contenedor se comienzan a identificar con cero (0).
-	 * 
-	 * @return 
-	 * 
-	 * @api {get} /Murachi/0.1/archivos/bdocs/archivos/{fileId}/{dataFileId} Descarga un archivo del Contenedor 
-	 * @apidescription Descarga un archivo existente dentro del contenedor BDOC. Un contenedor BDOC puede tener uno
-	 * o varios archivos. Los identificadores de archivos dentro de un contenedor BDOC se comienzan e enumerar con
-	 * cero (0).
-	 * 
-	 * @apiName BDocsDescarga
-	 * @apiGroup BDOCS
-	 * @apiVersion 0.1.0
-	 * 
-	 * @apiParam {String} fileId identificador del contenedor BDOC que se encuentra en el servidor
-	 * @apiParam {Number} dataFileId identificador del archivo que se desea descargar. Los archivos que
-	 * se encuentran dentro de un contenedor se comienzan a identificar con cero (0).
-	 * 
-	 * @apiExample Example usage:
-     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee/0
-	 * 	 
-	 * 
-	 * @apiErrorExample {json} Error-Response:
-	 *     HTTP/1.1 404 Not Found
-	 *     {
-	 *       "fileExist": false
-	 *     }
-	 */
-	@GET
-	@Path("/bdocs/archivos/{containerId}/{dataFileId}")
-	@Produces(MediaType.APPLICATION_OCTET_STREAM)
-	public Response downloadDataFileFromBDOC(@PathParam("containerId")  String containerId, @PathParam("dataFileId")  int dataFileId) {
-		logger.info("/bdocs/archivos/"+containerId+"/"+Integer.toString(dataFileId));
-		
-		logger.debug("dataFileId: " + Integer.toString(dataFileId));
-				
-		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId; 
-		
-		Response response;
-		
-		// Retrieve the file
-	    File file = new File(fullPathBdocFile);
-	    if (file.exists()) {
-	    		    	
-	    	Security.addProvider(new BouncyCastleProvider());
-			Container container = null;
-			
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
-			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
-			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
-		
-			if (containerId.endsWith(".bdoc"))
-			{
-				container = Container.open(fullPathBdocFile, configuration);
-				logger.debug("open container: "+ fullPathBdocFile);
-			}
-			else
-			{
-				try {
-					container = deserialize(fullPathBdocFile + "-serialized.bin");
-				} catch (ClassNotFoundException e) {
-
-					//e.printStackTrace();
-					response = Response.status(500).entity("{\"error\": \"no se pudo leer el contenido del contenedor\"}").type("text/plain").build();
-					logger.error("no se pudo deserializar el contenedor para leer su contenido");
-				}
-				catch (IOException e) {
-
-					//e.printStackTrace();
-					response = Response.status(500).entity("{\"error\": \"no se pudo leer el contenido del contenedor\"}").type("text/plain").build();
-					logger.error("no se pudo deserializar el contenedor para leer su contenido");
-				}
-			}
-			
-			int dfSize = container.getDataFiles().size();
-			
-			if (dataFileId > dfSize-1)
-			{
-				// no existe el dataFile con el id pasado como argumento
-				response = Response.status(404).entity("{\"error\": \"el dataFileId solicitado no existe\"}").type("text/plain").build();
-				logger.error("el dataFileId solicitado: "+Integer.toString(dataFileId)+ " no existe.");	
-			}
-			else
-			{
-				// el dataFile es valido
-				DataFile df = container.getDataFile(dataFileId);
-				logger.debug("obtenido DataFile: "+Integer.toString(dataFileId));
-				
-				String name = df.getName();
-				String dfSaved = SERVER_UPLOAD_LOCATION_FOLDER+name; 
-
-				df.saveAs(dfSaved);
-				logger.debug("guradado DataFile: "+dfSaved);
-				
-				File fileToDownload = new File(dfSaved);
-				
-				ResponseBuilder builder = Response.ok(fileToDownload);
-		    	builder.header("Content-Disposition", "attachment; filename=" + fileToDownload.getName());
-		    	response = builder.build();
-				
-			}
-				    	
-	    } else {
-	    	logger.error("El archivo con id: "+containerId+ " no existe.");
-	    	response = Response.status(404).entity("{\"fileExist\": false}").type("text/plain").build();
-	    }
-		
-		return response;
-	}
-	
-	
-	
-	/**
-	 * Retorna el numero de firmas que tiene en un contenedor
-	 * 
-	 * @param containerId
-	 * @return
-	 */
-	@GET
-	@Path("/bdocs/firmas/{containerId}")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response getSignatureNumber(@PathParam("containerId")  String containerId) {
-		logger.info("/bdocs/archivos/"+containerId);
-								
-		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bin";
-		logger.debug(fullPathBdocFile);
-		
-		
-		JSONObject json = new JSONObject();
-		int signatureNumber = 0;
-		
-		Response response;
-				
-		// Retrieve the file
-	    File file = new File(fullPathBdocFile);
-	    if (file.exists()) {
-	    		    	
-	    	Security.addProvider(new BouncyCastleProvider());
-						
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
-			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
-			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
-		
-			Container c;
-			
-			try {
-				c = deserialize(fullPathBdocFile);
-				
-				signatureNumber = c.getSignatures().size();				
-				
-				logger.debug("signatureNumber: "+ Integer.toString(signatureNumber));
-				json.put("signatureNumber", Integer.toString(signatureNumber));
-				
-				response = Response.status(200).entity(json.toString()).build();
-				
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				
-				json.put("error", "error interno al leer el contenedor");				
-				response = Response.status(500).entity(json.toString()).build();
-
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				json.put("error", "no se pudo leer el contenedor");				
-				response = Response.status(500).entity(json.toString()).build();
-			}										    	
-	    } else {
-	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
-	    	json.put("error", "El contenedor con id: "+containerId+ " no existe.");
-	    	response = Response.status(404).entity(json.toString()).build();
-	    }
-		return response;		
-	}
 	
 	/**
 	 * Crea un contenedor BDOC con los archivos subidos del formulario, lo serializa y 
@@ -2639,7 +2334,7 @@ public class MurachiRESTWS {
 	 * 
 	 * @param formParams parametros del formulario
 	 *  
-	 * @return  
+	 * @return  identificador unico del contenedor creado
 	 */
 	@POST
 	@Path("/bdocs/cargas")
@@ -2647,8 +2342,8 @@ public class MurachiRESTWS {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response uploadFilesToBDOC(FormDataMultiPart formParams) throws MurachiException {
 		
-		logger.info("/bdocs/cargas");
-		logger.debug("uploadFilesToBDOC...");
+		logger.info("recurso /bdocs/cargas");
+		logger.debug("	uploadFilesToBDOC...");
 		
 		// cadena con la respuesta
 		String result = "";
@@ -2657,6 +2352,7 @@ public class MurachiRESTWS {
 
 		Security.addProvider(new BouncyCastleProvider());		
 		Container c = createBDOCContainer();
+		logger.debug("	creado contenedor");
 		
 		Map<String, List<FormDataBodyPart>> fieldsByName = formParams.getFields();
 		
@@ -2675,14 +2371,13 @@ public class MurachiRESTWS {
 	            addFileToBDOCContainer(is, fileName, mimeType, c);
 	            	           
 	        }
-	    }
-		// se debe serializar no guardar
-		
+	    }		
 		String fileId = UUID.randomUUID().toString();
 		System.out.println("id contenedor serializado: "+fileId);
-		
+				
 		// establecer el nombre del archivo a serializar 
 		String serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + fileId + "-serialized";
+		logger.debug("	id de contenedor serializado: "+ serializedContainerId);
 	
 		// serializar el archivo 
 		try {
@@ -2709,7 +2404,7 @@ public class MurachiRESTWS {
 	 * @param formParams parametros del formulario
 	 * @param containerId identificador del contenedor pasado en la URL
 	 *  
-	 * @return  
+	 * @return identificador del contenedor
 	 */
 	@POST
 	@Path("/bdocs/cargas/{containerId}")
@@ -2717,8 +2412,8 @@ public class MurachiRESTWS {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response appendFilesToBDOC(FormDataMultiPart formParams, @PathParam("containerId")  String containerId) throws MurachiException {
 		
-		logger.info("/bdocs/cargas/{containerId}");
-		logger.debug("appendFilesToBDOC...");
+		logger.info("recurso /bdocs/cargas/"+containerId);
+		logger.debug("	appendFilesToBDOC...");
 		
 		// cadena con la respuesta
 		String result = "";
@@ -2774,7 +2469,7 @@ public class MurachiRESTWS {
 			serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized";
 			
 			serialize(c, serializedContainerId);
-			logger.debug("contenedor " + containerToOpen + " serializado.");
+			logger.debug("	contenedor " + containerToOpen + " serializado.");
 			
 			
 		} catch (ClassNotFoundException e) {
@@ -2793,20 +2488,444 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(result).build();
 		}
 
-		logger.debug("archivo agregado correctamente " + containerToOpen);
+		logger.debug("	archivo(s) agregado correctamente a" + containerToOpen);
 		
 		result = "\"containerId\":\""+ containerId +"\"";		
 				
 		return Response.status(200).entity(result).build();
 	}
+		
+	
+	/**
+	 * Retorna el numero de dataFile que se encuentran en un contenedor
+	 * 
+	 * @param containerId
+	 * @return
+	 */
+	@GET
+	@Path("/bdocs/archivos/{containerId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getDataFileNumber(@PathParam("containerId")  String containerId) {
+		logger.info("recurso /bdocs/archivos/"+containerId);
+								
+		String fullPathBdocFile = "";
+		
+		fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
+		logger.debug("	contenedor a deserializar: " +fullPathBdocFile);
+
+		JSONObject json = new JSONObject();
+		int dataFileNumber = 0;
+		
+		Response response = null;
+				
+		// Retrieve the file
+	    File file = new File(fullPathBdocFile);
+	    if (file.exists()) {
+	    		    	
+	    	Security.addProvider(new BouncyCastleProvider());
+						
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		
+			Container c;
+			
+			try {
+				c = deserialize(fullPathBdocFile);
+					
+				dataFileNumber = c.getDataFiles().size();
+				logger.debug("	dataFileNumber: "+ Integer.toString(dataFileNumber));
+				json.put("dataFileNumber", Integer.toString(dataFileNumber));
+				
+				response = Response.status(200).entity(json.toString()).build();
+					
+			} catch (ClassNotFoundException e) {
+			
+				e.printStackTrace();
+				
+				json.put("error", "error interno al leer el contenedor");				
+				response = Response.status(500).entity(json.toString()).build();
+
+			} catch (IOException e) {
+			
+				e.printStackTrace();
+				json.put("error", "no se pudo leer el contenedor");				
+				response = Response.status(500).entity(json.toString()).build();
+			}
+	    } else {
+	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
+	    	json.put("error", "El contenedor con id: "+containerId+ " no existe.");
+	    	response = Response.status(404).entity(json.toString()).build();
+	    }
+		return response;
+	}
+	
+	
+	/**
+	 * Descarga un archivo que se encuentra dentro de un contenedor BDOC.
+	 * 
+	 * @param fileId identificador del contenedor BDOC que se encuentra en el servidor
+	 * @param dataFileId identificador del archivo que se desea descargar. Los archivos que
+	 * se encuentran dentro de un contenedor se comienzan a identificar con cero (0).
+	 * 
+	 * @return 
+	 * 
+	 * @api {get} /Murachi/0.1/archivos/bdocs/archivos/{fileId}/{dataFileId} Descarga un archivo del Contenedor 
+	 * @apidescription Descarga un archivo existente dentro del contenedor BDOC. Un contenedor BDOC puede tener uno
+	 * o varios archivos. Los identificadores de archivos dentro de un contenedor BDOC se comienzan e enumerar con
+	 * cero (0).
+	 * 
+	 * @apiName BDocsDescarga
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * 
+	 * @apiParam {String} fileId identificador del contenedor BDOC que se encuentra en el servidor
+	 * @apiParam {Number} dataFileId identificador del archivo que se desea descargar. Los archivos que
+	 * se encuentran dentro de un contenedor se comienzan a identificar con cero (0).
+	 * 
+	 * @apiExample Example usage:
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee/0
+	 * 	 
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "fileExist": false
+	 *     }
+	 */
+	@GET
+	@Path("/bdocs/archivos/{containerId}/{dataFileId}")
+	@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	public Response downloadDataFileFromBDOC(@PathParam("containerId")  String containerId, @PathParam("dataFileId")  int dataFileId) {
+		logger.info("recurso /bdocs/archivos/"+containerId+"/"+Integer.toString(dataFileId));
+		
+		logger.debug("dataFileId: " + Integer.toString(dataFileId));
+				
+		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin"; 
+		
+		Response response;
+		
+		// Retrieve the file
+	    File file = new File(fullPathBdocFile);
+	    if (file.exists()) {
+	    		    	
+	    	Security.addProvider(new BouncyCastleProvider());
+			Container container = null;
+			
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		
+			try {
+				container = deserialize(fullPathBdocFile);
+				logger.debug("	contenedor " + fullPathBdocFile + " deserializado");
+			} catch (ClassNotFoundException e) {
+
+				response = Response.status(500).entity("{\"error\": \"no se pudo leer el contenido del contenedor\"}").type("text/plain").build();
+				logger.error("no se pudo deserializar el contenedor para leer su contenido");
+			}
+			catch (IOException e) {
+				response = Response.status(500).entity("{\"error\": \"no se pudo leer el contenido del contenedor\"}").type("text/plain").build();
+				logger.error("no se pudo deserializar el contenedor para leer su contenido");
+			}
+						
+			int dfSize = container.getDataFiles().size();
+			
+			if (dataFileId > dfSize-1)
+			{
+				// no existe el dataFile con el id pasado como argumento
+				response = Response.status(404).entity("{\"error\": \"el dataFileId solicitado no existe\"}").type("text/plain").build();
+				logger.error("el dataFileId solicitado: "+Integer.toString(dataFileId)+ " no existe.");	
+			}
+			else
+			{
+				// el dataFile es valido
+				DataFile df = container.getDataFile(dataFileId);
+				logger.debug("	obtenido DataFile: "+Integer.toString(dataFileId));
+				
+				String name = df.getName();
+				String dfSaved = SERVER_UPLOAD_LOCATION_FOLDER + name; 
+
+				df.saveAs(dfSaved);
+				logger.debug("	guardado DataFile: "+dfSaved);
+				
+				File fileToDownload = new File(dfSaved);
+				
+				ResponseBuilder builder = Response.ok(fileToDownload);
+		    	builder.header("Content-Disposition", "attachment; filename=" + fileToDownload.getName());
+		    	response = builder.build();
+				
+			}
+				    	
+	    } else {
+	    	logger.error("El archivo con id: "+containerId+ " no existe.");
+	    	response = Response.status(404).entity("{\"fileExist\": false}").type("text/plain").build();
+	    }
+		
+		return response;
+	}
+	
+	
+	/**
+	 * Elimina un archivo DataFile de un contendor existente
+	 * 
+	 * @param containerId identificador del contenedor para eliminar su dataFile
+	 * @return verificación de eliminación
+	 */
+	@GET
+	@Path("/bdocs/archivos/papelera/{containerId}/{dataFileId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response removeDataFile(@PathParam("containerId")  String containerId, @PathParam("dataFileId") int dataFileId) {
+		logger.info("recurso /bdocs/archivos/papelera/"+containerId+"/"+Integer.toString(dataFileId));
+		
+		logger.debug("dataFileId: " + Integer.toString(dataFileId));
+		
+		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin"; 
+		
+		int signatureNumber = 0;
+		
+		Response response = null;
+		
+		JSONObject json = new JSONObject();
+		
+		// Retrieve the file
+	    File file = new File(fullPathBdocFile);
+	    if (file.exists()) {
+	    		    	
+	    	Security.addProvider(new BouncyCastleProvider());
+			Container container = null;
+			
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		
+			try {
+				container = deserialize(fullPathBdocFile);
+				logger.debug("	contenedor " + fullPathBdocFile + " deserializado");
+			} catch (ClassNotFoundException e) {
+
+				response = Response.status(500).entity("{\"error\": \"no se pudo leer el contenido del contenedor\"}").type("text/plain").build();
+				logger.error("no se pudo deserializar el contenedor para leer su contenido");
+			}
+			catch (IOException e) {
+				response = Response.status(500).entity("{\"error\": \"no se pudo leer el contenido del contenedor\"}").type("text/plain").build();
+				logger.error("no se pudo deserializar el contenedor para leer su contenido");
+			}
+				
+			// contenedor deserializado, ahora verficar que no este firmado
+			signatureNumber = container.getSignatures().size();							
+			logger.debug("	signatureNumber: "+ Integer.toString(signatureNumber));
+			
+			if (signatureNumber > 0) 
+			{
+				// el archivo esta firmado y no se puede eliminar el dataFile
+				response = Response.status(200).entity("{\"error\": \"el contenedor está firmado y no se puede eliminar el archivo\"}").type("text/plain").build();
+				logger.error("el contenedor está firmado y no se puede eliminar el archivo.");
+			}
+			else
+			{
+				int nDataFile = container.getDataFiles().size();
+				
+				if (dataFileId >= nDataFile)
+				{
+					// el dataFileId no es valido
+					response = Response.status(200).entity("{\"error\": \"el identificador del archivo no es valido\"}").type("text/plain").build();
+					logger.error("el identificador del archivo no es valido.");
+				}
+				else
+				{				
+					// el dataFile es valido
+					DataFile df = container.getDataFile(dataFileId);
+					logger.debug("	obtenido DataFile: "+Integer.toString(dataFileId) + " fileName: "+ df.getName());
+					
+					container.removeDataFile(df.getName());
+					logger.debug("	eliminado DataFile: "+Integer.toString(dataFileId) + " fileName: "+ df.getName());
+					
+					
+					// serializar el contenedor de nuevo
+					try {
+						serialize(container, SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
+						logger.debug("	contenedor:" + fullPathBdocFile + " serializado.");
+						
+						json.put("mensaje", "archivo eliminado correctamente");				
+						response = Response.status(200).entity(json.toString()).build();
+						
+					} catch (IOException e) {
+						logger.error("error en la serializacion del contenedor: " + fullPathBdocFile);
+						response = Response.status(500).entity("{\"error\": \"no se serializar el contenedor\"}").type("text/plain").build();
+					}					
+				}
+			}
+	    } else {
+	    	logger.error("El archivo con id: "+containerId+ " no existe.");
+	    	response = Response.status(404).entity("{\"fileExist\": false}").type("text/plain").build();
+	    }
+		
+		return response;
+				
+	}
+	
+	
+	
+	/**
+	 * Retorna lista de los dataFile que se encuentran en un contenedor
+	 * 
+	 * @param containerId identificador del contenedor
+	 * @return lista de los dataFile que se encuentran en un contenedor
+	 */
+	@GET
+	@Path("/bdocs/archivos/lista/{containerId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getDataFileList(@PathParam("containerId")  String containerId) {
+	
+		
+		logger.info("recurso /bdocs/archivos/lista/"+containerId);
+		
+		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
+		logger.debug(fullPathBdocFile);
+		
+		JSONObject jsonDataFile = new JSONObject();
+		int dataFileNumber = 0;
+		
+		Response response = null;
+				
+		// Retrieve the file
+	    File file = new File(fullPathBdocFile);
+	    if (file.exists()) {
+	    		    	
+	    	Security.addProvider(new BouncyCastleProvider());
+						
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		
+			Container c = null;
+			String dataFileName = "";
+			Long dataFileSize = (long) 0;
+			
+			
+		
+			try {
+				c = deserialize(fullPathBdocFile);
+				logger.debug("contenedor deserializado: " + fullPathBdocFile);
+					
+			} catch (ClassNotFoundException e) {
+				
+				jsonDataFile.put("error", "error interno al leer el contenedor");				
+				response = Response.status(500).entity(jsonDataFile.toString()).build();
+				return response;
+
+			} catch (IOException e) {
+				jsonDataFile.put("error", "no se pudo leer el contenedor");				
+				response = Response.status(500).entity(jsonDataFile.toString()).build();
+				return response;
+			}
+				
+			dataFileNumber = c.getDataFiles().size();
+			logger.debug("dataFileNumber: " + Integer.toString(dataFileNumber));
+			
+			if (dataFileNumber > 0)
+			{
+				for (int i=0; i<dataFileNumber; i++)
+				{
+					// el dataFile es valido
+					DataFile df = c.getDataFile(i);
+					dataFileName = df.getName();
+					dataFileSize = df.getFileSize();
+					logger.debug("obtenido DataFile: "+Integer.toString(i));
+					logger.debug("DataFile name: "+ dataFileName);
+					logger.debug("DataFile size: "+ Long.toString(dataFileSize));
+				}
+				jsonDataFile.put("dataFiles", getJSONFromBDOCDataFiles(c.getDataFiles()));
+				response = Response.status(200).entity(jsonDataFile.toString()).build();
+			}
+			else
+			{
+				logger.debug("dataFileNumber: "+ Integer.toString(dataFileNumber));
+				jsonDataFile.put("dataFileNumber", Integer.toString(dataFileNumber));
+				response = Response.status(200).entity(jsonDataFile.toString()).build();
+			}		
+			
+													    	
+	    } else {
+	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
+	    	jsonDataFile.put("error", "El contenedor con id: "+containerId+ " no existe.");
+	    	response = Response.status(404).entity(jsonDataFile.toString()).build();
+	    }
+		return response;
+	}
+
+	// ------------> a seguir	
+	
+	/**
+	 * Retorna el numero de firmas que tiene en un contenedor
+	 * 
+	 * @param containerId
+	 * @return numero de firmas del contenedor
+	 */
+	@GET
+	@Path("/bdocs/firmas/{containerId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getSignatureNumber(@PathParam("containerId")  String containerId) {
+		logger.info("/bdocs/archivos/"+containerId);
+								
+		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
+		logger.debug(fullPathBdocFile);
+		
+		
+		JSONObject json = new JSONObject();
+		int signatureNumber = 0;
+		
+		Response response;
+				
+		// Retrieve the file
+	    File file = new File(fullPathBdocFile);
+	    if (file.exists()) {
+	    		    	
+	    	Security.addProvider(new BouncyCastleProvider());
+						
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		
+			Container c;
+			
+			try {
+				c = deserialize(fullPathBdocFile);
+				
+				signatureNumber = c.getSignatures().size();				
+				
+				logger.debug("signatureNumber: "+ Integer.toString(signatureNumber));
+				json.put("signatureNumber", Integer.toString(signatureNumber));
+				
+				response = Response.status(200).entity(json.toString()).build();
+				
+			} catch (ClassNotFoundException e) {
+							
+				json.put("error", "error interno al leer el contenedor");				
+				response = Response.status(500).entity(json.toString()).build();
+
+			} catch (IOException e) {
+				
+				json.put("error", "no se pudo leer el contenedor");				
+				response = Response.status(500).entity(json.toString()).build();
+			}										    	
+	    } else {
+	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
+	    	json.put("error", "El contenedor con id: "+containerId+ " no existe.");
+	    	response = Response.status(404).entity(json.toString()).build();
+	    }
+		return response;		
+	}
+	
+	
 	
 	
 	/**
 	 * Ejecuta la prefirma de un contenedor BDOC calculando el hash y enviandolo al cliente para que lo firme.
 	 * 
-	 * @param presignPar
-	 * @param req
-	 * @return
+	 * @param presignPar Parametros para preparar la firma.
+	 * @return hash del archivo a firmar del lado del cliente.
 	 * @throws MurachiException
 	 */
 	@POST
@@ -2815,7 +2934,7 @@ public class MurachiRESTWS {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response presignBDOCContainer(PresignParametersBdoc presignPar) throws MurachiException {
 		
-		logger.info("/bdocs/firmas/pre");
+		logger.info("recurso /bdocs/firmas/pre");
 		
 		PresignHash presignHash = new PresignHash();
 
@@ -2827,22 +2946,22 @@ public class MurachiRESTWS {
 		System.out.println("certificado en Hex: " + certHex);
 
 		String city = presignPar.getCity();
-		logger.debug("city: " + city);
+		logger.debug("	city: " + city);
 		
 		String state = presignPar.getState();
-		logger.debug("state: " + state);
+		logger.debug("	state: " + state);
 		
 		String postalCode = presignPar.getPostalCode();
-		logger.debug("postalCode: " + postalCode);
+		logger.debug("	postalCode: " + postalCode);
 		
 		String country = presignPar.getCountry();
-		logger.debug("country: " + country);
+		logger.debug("	country: " + country);
 		
 		String role = presignPar.getRole();
-		logger.debug("role: " + role);
+		logger.debug("	role: " + role);
 		
 		Boolean addSignature = presignPar.getAddSignature();
-		logger.debug("addSignature: " + addSignature.toString());
+		logger.debug("	addSignature: " + addSignature.toString());
 		
 		CertificateFactory cf;
 		X509Certificate signerCert;
@@ -2915,7 +3034,7 @@ public class MurachiRESTWS {
 			logger.debug("hash to sign: " + hashToSign);
 		
 			
-			String[] array = containerId.split("\\.bin");
+			//String[] array = containerId.split("\\.bin");
 			
 			// establecer el nombre del archivo a serializar 
 			String serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized";
@@ -2956,14 +3075,22 @@ public class MurachiRESTWS {
 	
 	
 	
-	
+	/**
+	 * Ejecuta el proceso de completacion de la firma de contenedor BDOC
+	 * 
+	 * @param postsignPar Parametros para completar la firma del contenedor BDOC
+	 * @return identificador del contenedor firmado
+	 * 
+	 * @throws IOException
+	 * @throws MurachiException
+	 */
 	@POST
 	@Path("/bdocs/firmas/post")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)	
 	public Response postsignBDOCContainer(PostsignParameters postsignPar) throws IOException, MurachiException {
 		
-		logger.info("/bdocs/resenas");
+		logger.info("recurso /bdocs/resenas");
 
 		// cadena con la firma
 		String signature = postsignPar.getSignature();
@@ -2982,16 +3109,16 @@ public class MurachiRESTWS {
 		*/
 		
 		String signedBdoc = containerId + ".bdoc";
-		logger.debug("sigendBdoc: " + signedBdoc);
+		logger.debug("	sigendBdoc: " + signedBdoc);
 		
 		String serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
 				
 		System.out.println("serializedContainerId: " + serializedContainerId);
-		logger.debug("serializedContainerId: " + serializedContainerId);
+		logger.debug("	serializedContainerId: " + serializedContainerId);
 		
 		try {
 			Container deserializedContainer = deserialize(serializedContainerId);
-			logger.debug("deserializado el contenedor");
+			logger.debug("	deserializado el contenedor "+ serializedContainerId);
 			
 			byte[] signatureInBytes = hexStringToByteArray(signature);
 			
@@ -2999,14 +3126,14 @@ public class MurachiRESTWS {
 			logger.debug("asignada firma al contenedor");
 			
 			
-			deserializedContainer.save(SERVER_UPLOAD_LOCATION_FOLDER + signedBdoc);
-			logger.debug("guardado el contenedor: " + signedBdoc);
+			//deserializedContainer.save(SERVER_UPLOAD_LOCATION_FOLDER + signedBdoc);
+			serialize(deserializedContainer, SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
+			logger.debug(" serializado el contenedor: " + SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
 			
 			//
-			File f = new File(serializedContainerId);
-			f.delete();
+			//File f = new File(serializedContainerId);
+			//f.delete();
 			
-			logger.debug("archivo firmado escrito en: " + signedBdoc);			
 		} catch (ClassNotFoundException e) {
 			//e.printStackTrace();
 			
@@ -3025,10 +3152,10 @@ public class MurachiRESTWS {
 		logger.debug("Archivo firmado correctamente");
 			
 		PostsignMessage message = new PostsignMessage();
-		message.setMessage("{\"signedFile\":"+ signedBdoc);
+		message.setMessage("{\"signedFile\":"+ containerId);
 				
 		JSONObject jsonFinalResult = new JSONObject();
-		jsonFinalResult.put("signedFileId", signedBdoc);
+		jsonFinalResult.put("signedFileId", containerId);
 		
 		logger.info(jsonFinalResult.toString());
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
@@ -3184,6 +3311,7 @@ public class MurachiRESTWS {
 		
 		c.addDataFile(is, fileName, mimeType);
 		System.out.println("agregado archivo a contenedor");
+		logger.debug("agregado el archivo:  " + fileName + " al contenedor.");
 	}
 	
 	
