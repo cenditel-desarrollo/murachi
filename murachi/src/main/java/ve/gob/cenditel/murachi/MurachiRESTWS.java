@@ -334,7 +334,7 @@ public class MurachiRESTWS {
 	 * @param fileName nombre o identificador del archivo que se desea descargar
 	 * @return archivo pasado como argumento del servidor
 	 */
-	/*
+	
 	private Response downloadFileFromServer(String fileName) {    
 	    String fileLocation = SERVER_UPLOAD_LOCATION_FOLDER + fileName;
 	    Response response = null;
@@ -360,8 +360,9 @@ public class MurachiRESTWS {
 	      
 	    return response;
 	  }
-	*/
 	
+	
+	/*
 	private Response downloadFileFromServer(String fileName) {    
 		logger.info("downloadFileFromServer{"+fileName+"}");
 	    
@@ -379,7 +380,7 @@ public class MurachiRESTWS {
 	    
 	    if (checkFileExists(SERVER_UPLOAD_LOCATION_FOLDER + fileName + "-serialized.bin")) {
 	    	
-	    	logger.debug("	descarga de contenedor BDOC");
+	    	logger.debug("	descarga de contenedor BDOC: " + SERVER_UPLOAD_LOCATION_FOLDER + fileName + "-serialized.bin");
 	    	
 	    	try {				
 				Security.addProvider(new BouncyCastleProvider());						
@@ -387,6 +388,11 @@ public class MurachiRESTWS {
 			
 				// deserializar el contenedor 
 				c = deserialize(SERVER_UPLOAD_LOCATION_FOLDER + fileName + "-serialized.bin");
+				logger.debug("	deserializado contenedor: " + SERVER_UPLOAD_LOCATION_FOLDER + fileName + "-serialized.bin");
+				
+				logger.debug("numero de dataFile: "+ Integer.toString(c.getDataFiles().size()));
+				logger.debug("numero de firmas: "+ Integer.toString(c.getSignatures().size()));
+				
 			
 				// guardar el contenedor .bdoc
 				c.save(SERVER_UPLOAD_LOCATION_FOLDER + fileName + ".bdoc");
@@ -430,6 +436,7 @@ public class MurachiRESTWS {
 	      
 	    return response;
 	  }
+	*/
 	
 	
 	/**
@@ -2855,7 +2862,7 @@ public class MurachiRESTWS {
 		return response;
 	}
 
-	// ------------> a seguir	
+		
 	
 	/**
 	 * Retorna el numero de firmas que tiene en un contenedor
@@ -2867,7 +2874,7 @@ public class MurachiRESTWS {
 	@Path("/bdocs/firmas/{containerId}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getSignatureNumber(@PathParam("containerId")  String containerId) {
-		logger.info("/bdocs/archivos/"+containerId);
+		logger.info("/bdocs/firmas/"+containerId);
 								
 		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
 		logger.debug(fullPathBdocFile);
@@ -2917,6 +2924,106 @@ public class MurachiRESTWS {
 	    }
 		return response;		
 	}
+	
+	
+	/**
+	 * Elimina una firma de un contendor firmado
+	 * 
+	 * @param containerId identificador del contenedor para eliminar la firma
+	 * @param signatureId identificador de la firma a eliminar
+	 * 
+	 * @return identificador del contenedor
+	 */
+	@GET
+	@Path("/bdocs/firmas/papelera/{containerId}/{signatureId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response removeSignature(@PathParam("containerId")  String containerId, @PathParam("signatureId") int signatureId) {
+		logger.info("recurso /bdocs/firmas/papelera/"+containerId+"/"+Integer.toString(signatureId));
+		
+		logger.debug("dataFileId: " + Integer.toString(signatureId));
+		
+		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
+		logger.debug(fullPathBdocFile);
+		
+		
+		JSONObject json = new JSONObject();
+		int signatureNumber = 0;
+		
+		Response response = null;
+				
+		// Retrieve the file
+	    File file = new File(fullPathBdocFile);
+	    if (file.exists()) {
+	    		    	
+	    	Security.addProvider(new BouncyCastleProvider());
+						
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		
+			Container container = null;
+			
+			try {
+				container = deserialize(fullPathBdocFile);
+				logger.debug("	contenedor " + fullPathBdocFile + " deserializado");
+			} catch (ClassNotFoundException e) {
+
+				response = Response.status(500).entity("{\"error\": \"no se pudo leer el contenido del contenedor\"}").type("text/plain").build();
+				logger.error("no se pudo deserializar el contenedor para leer su contenido");
+			}
+			catch (IOException e) {
+				response = Response.status(500).entity("{\"error\": \"no se pudo leer el contenido del contenedor\"}").type("text/plain").build();
+				logger.error("no se pudo deserializar el contenedor para leer su contenido");
+			}
+				
+			// contenedor deserializado, ahora verficar que este firmado
+			signatureNumber = container.getSignatures().size();							
+			logger.debug("	signatureNumber: "+ Integer.toString(signatureNumber));
+			
+			if (signatureNumber < 1) 
+			{
+				// el archivo esta firmado y no se puede eliminar el dataFile
+				response = Response.status(200).entity("{\"error\": \"el contenedor no está firmado\"}").type("text/plain").build();
+				logger.error("el contenedor no está firmado.");
+			}
+			else
+			{				
+				if (signatureId >= signatureNumber)
+				{
+					// el dataFileId no es valido
+					response = Response.status(200).entity("{\"error\": \"el identificador de la firma a eliminar no es valido\"}").type("text/plain").build();
+					logger.error("el identificador de la firma a eliminar no es valido.");
+				}
+				else
+				{
+					// eliminar la firma
+					container.removeSignature(signatureId);
+					logger.debug("	eliminada signature: "+Integer.toString(signatureId));
+				
+					// serializar el contenedor de nuevo
+					try {
+						serialize(container, SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
+						logger.debug("	serializado contenedor:" + fullPathBdocFile + " serializado.");
+					
+						json.put("mensaje", "firma eliminada correctamente");				
+						response = Response.status(200).entity(json.toString()).build();
+					
+					} catch (IOException e) {
+						logger.error("error en la serializacion del contenedor: " + fullPathBdocFile);
+						response = Response.status(500).entity("{\"error\": \"no se serializar el contenedor\"}").type("text/plain").build();
+					}					
+				}				
+			}			
+		} else {
+	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
+	    	json.put("error", "El contenedor con id: "+containerId+ " no existe.");
+	    	response = Response.status(404).entity(json.toString()).build();
+	    }
+		return response;
+			
+	}
+	
+	// ------------> a seguir
 	
 	
 	
@@ -3090,7 +3197,7 @@ public class MurachiRESTWS {
 	@Produces(MediaType.APPLICATION_JSON)	
 	public Response postsignBDOCContainer(PostsignParameters postsignPar) throws IOException, MurachiException {
 		
-		logger.info("recurso /bdocs/resenas");
+		logger.info("recurso /bdocs/firmas/post");
 
 		// cadena con la firma
 		String signature = postsignPar.getSignature();
@@ -3099,15 +3206,7 @@ public class MurachiRESTWS {
 		
 		// obtener el id del archivo a firmar
 		String containerId = postsignPar.getContainerId();
-		
-		/*
-		HttpSession session = req.getSession(false);
-		
-		String fileId = (String) session.getAttribute("fileId");
-		System.out.println("fileId: " + fileId);
-		logger.debug("fileId: " + fileId);
-		*/
-		
+				
 		String signedBdoc = containerId + ".bdoc";
 		logger.debug("	sigendBdoc: " + signedBdoc);
 		
@@ -3125,13 +3224,31 @@ public class MurachiRESTWS {
 			deserializedContainer.signRaw(signatureInBytes);
 			logger.debug("asignada firma al contenedor");
 			
-			
+			/*
 			//deserializedContainer.save(SERVER_UPLOAD_LOCATION_FOLDER + signedBdoc);
 			serialize(deserializedContainer, SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
 			logger.debug(" serializado el contenedor: " + SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
+			*/
 			
-			//
-			//File f = new File(serializedContainerId);
+			
+			// prueba para evitar que las firmas tengan la misma hora de aplicacion
+
+			// escribir el contendedor
+			deserializedContainer.save(SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bdoc");
+			
+			// abrir el contenedor
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);			
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);			
+			Container c = Container.open(SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bdoc", configuration);
+			logger.debug("	contenedor abierto: " + SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bdoc");			
+			
+			// serializar el contenedor
+			serialize(c, SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
+			logger.debug("	serializado contenedor: " + SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
+			
+			// eliminar el contenedor guardado
+			//File f = new File(SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bdoc");
 			//f.delete();
 			
 		} catch (ClassNotFoundException e) {
@@ -3155,7 +3272,7 @@ public class MurachiRESTWS {
 		message.setMessage("{\"signedFile\":"+ containerId);
 				
 		JSONObject jsonFinalResult = new JSONObject();
-		jsonFinalResult.put("signedFileId", containerId);
+		jsonFinalResult.put("signedFileId", containerId+".bdoc");
 		
 		logger.info(jsonFinalResult.toString());
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
