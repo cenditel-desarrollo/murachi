@@ -2,21 +2,17 @@ package ve.gob.cenditel.murachi;
 
 import static java.util.Arrays.asList;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
@@ -3969,135 +3965,7 @@ public class MurachiRESTWS {
 	}
 	
 	
-	
-	// ************************************************************************
-	// ************************************************************************
-	// ************************************************************************
 
-	// pruebas de funciones para gestionar un contenedor BDOC
-	
-	@GET
-	@Path("/pruebaBDOC")
-	@Produces("text/plain")
-	public String testBDOCFunctions()  {
-		
-		Security.addProvider(new BouncyCastleProvider());
-		
-		Container c = createBDOCContainer();
-		
-		String containerId = UUID.randomUUID().toString();
-		System.out.println(containerId);
-		
-		if (c==null)
-		{
-			System.out.println("container == null");
-		}
-		else
-		{
-			System.out.println("container != null");
-		}
-		
-		addFileToBDOCContainer("/tmp/slides-93-cfrg-9.pdf", c);
-		
-		System.out.println("numero de archivos en el contenedor: " + Integer.toString(c.getDataFiles().size()));
-		
-		PKCS12Signer PKCS12_SIGNER = new PKCS12Signer("/tmp/tibisay.p12", "123456".toCharArray());
-		
-		SignatureParameters signatureParameters = new SignatureParameters();
-		SignatureProductionPlace productionPlace = new SignatureProductionPlace();
-		productionPlace.setCity("Merida");
-		productionPlace.setStateOrProvince("Merida");
-		productionPlace.setPostalCode("5101");
-		productionPlace.setCountry("Venezuela");
-		signatureParameters.setProductionPlace(productionPlace);
-		logger.debug("container setProductionPlace");
-		signatureParameters.setRoles(asList("Desarrollador"));
-		c.setSignatureParameters(signatureParameters);
-		c.setSignatureProfile(SignatureProfile.B_BES);
-		
-		c.sign(PKCS12_SIGNER);
-		
-		
-		if (deleteDataFileFromBDOCContainer("/tmp/slides-93-cfrg-9.pdf", c))
-		{
-			System.out.println("eliminado archivo del contenedor");
-		}
-		else
-		{
-			System.out.println("NO se eliminó el archivo del contenedor");
-		}
-			
-		if (deleteSignatureFromBDOCContainer(0, c))
-		{
-			System.out.println("SE ELIMINO la firma 2");
-		}
-		else
-		{
-			System.out.println("no se pudo eliminar la firma 0");
-		}
-		
-		System.out.println("numero de firmas restantes: "+ Integer.toString(c.getSignatures().size()));
-		
-		c.save("/tmp/prueba.bdoc");
-		
-		return "prueba exitosa";
-	}
-	
-	@GET
-	@Path("/serializar")
-	@Produces("text/plain")
-	public String serialize()  {
-		
-		logger.debug("recurso /serializar");
-		
-		Security.addProvider(new BouncyCastleProvider());
-		
-		Container c;
-		try {
-			c = deserialize("/tmp/container.bin");
-			logger.debug("deserializado contenedor");
-			
-			logger.debug("numero de firmas: "+ Integer.toString(c.getSignatures().size()));
-			
-			Security.addProvider(new BouncyCastleProvider());
-			
-			//c.sign(new PKCS12Signer("/tmp/ayzarra.p12", "ayzarra".toCharArray()));
-						
-			//c.save("/tmp/deserializado.bdoc");
-			
-			if (c.getSignatures().size() > 0) {
-		    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-		        c.save(byteOut);
-		        ByteArrayInputStream byteIn = new ByteArrayInputStream(byteOut.toByteArray());
-		        
-		        //Configuration configuration = initConfig(); // also need to re-initialize configuration settings
-		        
-		        Configuration configuration = new Configuration(Configuration.Mode.PROD);		
-		    	configuration.loadConfiguration("/tmp/digidoc4j.yaml");
-		    	configuration.setTslLocation("file:///tmp/venezuela-tsl.xml");        
-		        
-		        Container container2 = Container.open(byteIn, configuration);
-		        container2.sign(new PKCS12Signer("/tmp/ayzarra.p12", "ayzarra".toCharArray()));
-		        
-		        System.out.println("********numero de firmas deserialize : "+ Integer.toString(container2.getSignatures().size()));
-		        container2.save("/tmp/deserializado2.bdoc");
-
-		    }
-			
-			
-			
-		} catch (ClassNotFoundException | IOException e) {
-			e.printStackTrace();
-			
-			logger.error("ClassNotFoundException | IOException e");
-			return "error ClassNotFoundException | IOException e";
-			
-		}
-		
-			
-		return "prueba exitosa";
-	}
-	
 	
 	/**
 	 * Crea un contenedor BDOC 
@@ -4268,9 +4136,7 @@ public class MurachiRESTWS {
 	}
 	
 	
-	// ************************************************************************
-	// ************************************************************************
-	// ************************************************************************
+	
 	
 	private static void verifyBdocContainer(Container container) {
 		logger.debug("verifyBdocContainer(Container container)");
@@ -4357,102 +4223,401 @@ public class MurachiRESTWS {
 	  }
 
 	
+
 	
 	/**
-	 * Verifica si un archivo posee firmas electronicas y retorna informacion
-	 * de las mismas en un json
-	 * @param idFile
-	 * @return
+	 * Retorna el mimeType del archivo pasado como argumento
+	 * @param absolutFilePath ruta absoluta del archivo
+	 * @return mimeType del archivo pasado como argumento
 	 */
-	@GET
-	@Path("/verificar/{idFile}")
-	//@Produces("application/json")
-	@Produces("text/plain")
-	public String verifyFile(@PathParam("idFile") String idFile) {
-		
-		String file = SERVER_UPLOAD_LOCATION_FOLDER + idFile;
-	
-		//return getMimeType(file);
-		
+	public String getMimeType(String absolutFilePath) {
 				
-		File tmpFile = new File(file);
-		String result = "";
+		String result = "";		
+		java.nio.file.Path source = Paths.get(absolutFilePath);
+		try {
+			result = Files.probeContentType(source);			
+			System.out.println(result);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}		
+		return result;		 
+	}
+	
+	/**
+	 * Retorna el mimeType del archivo pasado como argumento
+	 * @param absolutFilePath ruta absoluta del archivo
+	 * @return mimeType del archivo pasado como argumento
+	 */
+	public String getMimeTypeWithTika(String absolutFilePath) {
+				
+		String mimeType = "";		
+		
+		Tika tika = new Tika();
+		File file = new File(absolutFilePath);
+		try {
+			mimeType = tika.detect(file);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		/*
+		java.nio.file.Path source = Paths.get(absolutFilePath);
+		try {
+			result = Files.probeContentType(source);			
+			System.out.println(result);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		*/		
+		return mimeType;		 
+	}
+	
+	
+	/**
+	 * Convierte una cadena Hexadecimal en un arreglo de bytes
+	 * @param s cadena hexadecimal
+	 * @return arreglo de bytes resultantes de la conversion de la cadena hexadecimal
+	 */
+	public static byte[] hexStringToByteArray(String s) {
+	    byte[] b = new byte[s.length() / 2];
+	    for (int i = 0; i < b.length; i++) {
+	      int index = i * 2;
+	      int v = Integer.parseInt(s.substring(index, index + 2), 16);
+	      b[i] = (byte) v;
+	    }
+	    return b;
+	  }
+	
+	/**
+	   * Converts a byte array into a hex string.
+	   * @param byteArray the byte array source
+	   * @return a hex string representing the byte array
+	   */
+	  public static String byteArrayToHexString(final byte[] byteArray) {
+	      if (byteArray == null) {
+	          return "";
+	      }
+	      return byteArrayToHexString(byteArray, 0, byteArray.length);
+	  }
+	  
+	  public static String byteArrayToHexString(final byte[] byteArray, int startPos, int length) {
+	      if (byteArray == null) {
+	          return "";
+	      }
+	      if(byteArray.length < startPos+length){
+	          throw new IllegalArgumentException("startPos("+startPos+")+length("+length+") > byteArray.length("+byteArray.length+")");
+	      }
+//	      int readBytes = byteArray.length;
+	      StringBuilder hexData = new StringBuilder();
+	      int onebyte;
+	      for (int i = 0; i < length; i++) {
+	          onebyte = ((0x000000ff & byteArray[startPos+i]) | 0xffffff00);
+	          hexData.append(Integer.toHexString(onebyte).substring(6));
+	      }
+	      return hexData.toString();
+	  }
+	
+	  /**
+	   * Serializa el contenedor BDOC pasado como argumento
+	   * @param container Contenedor que se desea serializar
+	   * @param filePath ruta absoluta al archivo serializado
+	   * @throws IOException
+	   */
+	  private static void serialize(Container container, String filePath) throws IOException {
+		  FileOutputStream fileOut = new FileOutputStream(filePath+".bin");
+		  ObjectOutputStream out = new ObjectOutputStream(fileOut);
+		  out.writeObject(container);
+		  out.flush();
+		  out.close();
+		  fileOut.close();
+	  }
+	  
+	  /**
+	   * Deserializa el contenedor BDOC pasado como argumento
+	   * @param filePath ruta absoluta al contenedor que se desea deserializar
+	   * @return contenedor deserializado
+	   * @throws IOException
+	   * @throws ClassNotFoundException
+	   */
+	  private static Container deserialize(String filePath) throws IOException, ClassNotFoundException {
+		  //FileInputStream fileIn = new FileInputStream("container.bin");
+		  FileInputStream fileIn = new FileInputStream(filePath);
+		  ObjectInputStream in = new ObjectInputStream(fileIn);
+		  Container container = (Container) in.readObject();
+		  in.close();
+		  fileIn.close();
+		  return container;
+	  }
+	  
+	  /**
+	   * Deserializa el contenedor BDOC pasado como argumento. Verifica si el contenedor está 
+	   * firmado para escribirlo y leerlo de nuevo.
+	   * @param filePath ruta absoluta al contenedor que se desea deserializar
+	   * @return contenedor deserializado
+	   * @throws IOException
+	   * @throws ClassNotFoundException
+	   * 
+	   */
+	  private Container deserializer1(String filePath) throws IOException, ClassNotFoundException {
+		  //FileInputStream fileIn = new FileInputStream("container.bin");
+		  FileInputStream fileIn = new FileInputStream(filePath);
+		  ObjectInputStream in = new ObjectInputStream(fileIn);
+		  Container container = (Container) in.readObject();
+		  in.close();
+		  fileIn.close();
 
+		  if (container.getSignatures().size() > 0) {
+			  ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+			  container.save(byteOut);
+			  ByteArrayInputStream byteIn = new ByteArrayInputStream(byteOut.toByteArray());
+
+			  //Configuration configuration = initConfig(); // also need to re-initialize configuration settings
+			  Configuration configuration = new Configuration(Configuration.Mode.PROD);		
+			  configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			  configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+			  Container container2 = Container.open(byteIn, configuration);
+
+			  byteOut.close();
+			  byteIn.close();
+			  return container2;
+		  } else {
+			  return container;
+		  }
+	  }
+	  
+	  
+	// ************************************************************************
+	// ************************************************************************
+	// ************************************************************************
+	  
+	  
+	
+
+	// pruebas de funciones para gestionar un contenedor BDOC
 		
-		
-		
-		if (tmpFile.exists()) {
-			result = "El archivo existe.";
+		@GET
+		@Path("/pruebaBDOC")
+		@Produces("text/plain")
+		public String testBDOCFunctions()  {
 			
+			Security.addProvider(new BouncyCastleProvider());
+			
+			Container c = createBDOCContainer();
+			
+			String containerId = UUID.randomUUID().toString();
+			System.out.println(containerId);
+			
+			if (c==null)
+			{
+				System.out.println("container == null");
+			}
+			else
+			{
+				System.out.println("container != null");
+			}
+			
+			addFileToBDOCContainer("/tmp/slides-93-cfrg-9.pdf", c);
+			
+			System.out.println("numero de archivos en el contenedor: " + Integer.toString(c.getDataFiles().size()));
+			
+			PKCS12Signer PKCS12_SIGNER = new PKCS12Signer("/tmp/tibisay.p12", "123456".toCharArray());
+			
+			SignatureParameters signatureParameters = new SignatureParameters();
+			SignatureProductionPlace productionPlace = new SignatureProductionPlace();
+			productionPlace.setCity("Merida");
+			productionPlace.setStateOrProvince("Merida");
+			productionPlace.setPostalCode("5101");
+			productionPlace.setCountry("Venezuela");
+			signatureParameters.setProductionPlace(productionPlace);
+			logger.debug("container setProductionPlace");
+			signatureParameters.setRoles(asList("Desarrollador"));
+			c.setSignatureParameters(signatureParameters);
+			c.setSignatureProfile(SignatureProfile.B_BES);
+			
+			c.sign(PKCS12_SIGNER);
+			
+			
+			if (deleteDataFileFromBDOCContainer("/tmp/slides-93-cfrg-9.pdf", c))
+			{
+				System.out.println("eliminado archivo del contenedor");
+			}
+			else
+			{
+				System.out.println("NO se eliminó el archivo del contenedor");
+			}
+				
+			if (deleteSignatureFromBDOCContainer(0, c))
+			{
+				System.out.println("SE ELIMINO la firma 2");
+			}
+			else
+			{
+				System.out.println("no se pudo eliminar la firma 0");
+			}
+			
+			System.out.println("numero de firmas restantes: "+ Integer.toString(c.getSignatures().size()));
+			
+			c.save("/tmp/prueba.bdoc");
+			
+			return "prueba exitosa";
+		}
+		
+		@GET
+		@Path("/serializar")
+		@Produces("text/plain")
+		public String serialize()  {
+			
+			logger.debug("recurso /serializar");
+			
+			Security.addProvider(new BouncyCastleProvider());
+			
+			Container c;
 			try {
-				PdfReader reader = new PdfReader(file);
-				AcroFields af = reader.getAcroFields();
-				ArrayList<String> names = af.getSignatureNames();
-				if (names.size() > 0) {
-					result = "el archivo PDF posee "+ names.size() +" firma(s).\n";
-					
-					// sin esto explota: se debe agregar una implementacion del provider en tiempo de ejecucion
-					//http://www.cs.berkeley.edu/~jonah/bc/org/bouncycastle/jce/provider/BouncyCastleProvider.html
-					Security.addProvider(new BouncyCastleProvider());
-					
-					for (String name: names) {
-						result = result +"Nombre de la firma: "+ name + "\n";
-						System.out.println("Nombre de la firma: "+ name);
-						
-						PdfPKCS7 pk = af.verifySignature(name);
-						
-						Certificate[] pkc = pk.getCertificates();
-						
-						String tmpSignerName = pk.getSigningCertificate().getSubjectX500Principal().toString();
-						
-						
-						result = result + "Sujeto del certificado firmante: " + tmpSignerName + "\n"; 
-						//pk.getSigningCertificate().getSubjectX500Principal().getName() + "\n";
-						System.out.println("Sujeto del certificado firmante: " + 
-								pk.getSigningCertificate().getSubjectX500Principal().toString());
-						  
-						Calendar cal = pk.getSignDate();
-						
-						SimpleDateFormat date_format = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
-						
-						//result = result + "Fecha de la firma: " + cal.toString() + "\n";
-						result = result + "Fecha de la firma: " + date_format.format(cal.getTime()) + "\n";
-						
-						/*
-						System.out.println("año: "+ cal.get(Calendar.YEAR));
-						System.out.println("mes: "+ (cal.get(Calendar.MONTH) + 1));
-						System.out.println("día: "+ cal.get(Calendar.DAY_OF_MONTH));
-						System.out.println("hora: "+ cal.get(Calendar.HOUR));
-						System.out.println("minuto: "+ cal.get(Calendar.MINUTE));
-						System.out.println("segundo: "+ cal.get(Calendar.SECOND));
-						*/
-						//SimpleDateFormat date_format = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
-					    System.out.println(date_format.format(cal.getTime()));
+				c = deserialize("/tmp/container.bin");
+				logger.debug("deserializado contenedor");
+				
+				logger.debug("numero de firmas: "+ Integer.toString(c.getSignatures().size()));
+				
+				Security.addProvider(new BouncyCastleProvider());
+				
+				//c.sign(new PKCS12Signer("/tmp/ayzarra.p12", "ayzarra".toCharArray()));
+							
+				//c.save("/tmp/deserializado.bdoc");
+				
+				if (c.getSignatures().size() > 0) {
+			    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+			        c.save(byteOut);
+			        ByteArrayInputStream byteIn = new ByteArrayInputStream(byteOut.toByteArray());
+			        
+			        //Configuration configuration = initConfig(); // also need to re-initialize configuration settings
+			        
+			        Configuration configuration = new Configuration(Configuration.Mode.PROD);		
+			    	configuration.loadConfiguration("/tmp/digidoc4j.yaml");
+			    	configuration.setTslLocation("file:///tmp/venezuela-tsl.xml");        
+			        
+			        Container container2 = Container.open(byteIn, configuration);
+			        container2.sign(new PKCS12Signer("/tmp/ayzarra.p12", "ayzarra".toCharArray()));
+			        
+			        System.out.println("********numero de firmas deserialize : "+ Integer.toString(container2.getSignatures().size()));
+			        container2.save("/tmp/deserializado2.bdoc");
 
+			    }
+				
+				
+				
+			} catch (ClassNotFoundException | IOException e) {
+				e.printStackTrace();
+				
+				logger.error("ClassNotFoundException | IOException e");
+				return "error ClassNotFoundException | IOException e";
+				
+			}
+			
+				
+			return "prueba exitosa";
+		}
+	  
+	  
+	  /**
+		 * Verifica si un archivo posee firmas electronicas y retorna informacion
+		 * de las mismas en un json
+		 * @param idFile
+		 * @return
+		 */
+		@GET
+		@Path("/verificar/{idFile}")
+		//@Produces("application/json")
+		@Produces("text/plain")
+		public String verifyFile(@PathParam("idFile") String idFile) {
+			
+			String file = SERVER_UPLOAD_LOCATION_FOLDER + idFile;
+		
+			//return getMimeType(file);
+			
+					
+			File tmpFile = new File(file);
+			String result = "";
+
+			
+			
+			
+			if (tmpFile.exists()) {
+				result = "El archivo existe.";
+				
+				try {
+					PdfReader reader = new PdfReader(file);
+					AcroFields af = reader.getAcroFields();
+					ArrayList<String> names = af.getSignatureNames();
+					if (names.size() > 0) {
+						result = "el archivo PDF posee "+ names.size() +" firma(s).\n";
+						
+						// sin esto explota: se debe agregar una implementacion del provider en tiempo de ejecucion
+						//http://www.cs.berkeley.edu/~jonah/bc/org/bouncycastle/jce/provider/BouncyCastleProvider.html
+						Security.addProvider(new BouncyCastleProvider());
+						
+						for (String name: names) {
+							result = result +"Nombre de la firma: "+ name + "\n";
+							System.out.println("Nombre de la firma: "+ name);
+							
+							PdfPKCS7 pk = af.verifySignature(name);
+							
+							Certificate[] pkc = pk.getCertificates();
+							
+							String tmpSignerName = pk.getSigningCertificate().getSubjectX500Principal().toString();
+							
+							
+							result = result + "Sujeto del certificado firmante: " + tmpSignerName + "\n"; 
+							//pk.getSigningCertificate().getSubjectX500Principal().getName() + "\n";
+							System.out.println("Sujeto del certificado firmante: " + 
+									pk.getSigningCertificate().getSubjectX500Principal().toString());
+							  
+							Calendar cal = pk.getSignDate();
+							
+							SimpleDateFormat date_format = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
+							
+							//result = result + "Fecha de la firma: " + cal.toString() + "\n";
+							result = result + "Fecha de la firma: " + date_format.format(cal.getTime()) + "\n";
+							
+							/*
+							System.out.println("año: "+ cal.get(Calendar.YEAR));
+							System.out.println("mes: "+ (cal.get(Calendar.MONTH) + 1));
+							System.out.println("día: "+ cal.get(Calendar.DAY_OF_MONTH));
+							System.out.println("hora: "+ cal.get(Calendar.HOUR));
+							System.out.println("minuto: "+ cal.get(Calendar.MINUTE));
+							System.out.println("segundo: "+ cal.get(Calendar.SECOND));
+							*/
+							//SimpleDateFormat date_format = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
+						    System.out.println(date_format.format(cal.getTime()));
+
+						}
+						
+						
+					}else{
+						result = "el archivo PDF no posee firmas";
 					}
 					
 					
-				}else{
-					result = "el archivo PDF no posee firmas";
+					
+				} catch (IOException e) {
+
+					e.printStackTrace();
 				}
 				
 				
-				
-			} catch (IOException e) {
-
-				e.printStackTrace();
+			}else {
+				result = "El archivo NO existe.";
 			}
 			
 			
-		}else {
-			result = "El archivo NO existe.";
-		}
-		
-		
-		return result;
-		
-		
-	}
+			return result;
+			
+			
+		}  
+	  
+	
 	
 	/**
 	 * Ejecuta el proceso de presign o preparacion de firma de documento pdf
@@ -5195,167 +5360,6 @@ public class MurachiRESTWS {
 	
 	
 	
-	/**
-	 * Retorna el mimeType del archivo pasado como argumento
-	 * @param absolutFilePath ruta absoluta del archivo
-	 * @return mimeType del archivo pasado como argumento
-	 */
-	public String getMimeType(String absolutFilePath) {
-				
-		String result = "";		
-		java.nio.file.Path source = Paths.get(absolutFilePath);
-		try {
-			result = Files.probeContentType(source);			
-			System.out.println(result);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}		
-		return result;		 
-	}
 	
-	/**
-	 * Retorna el mimeType del archivo pasado como argumento
-	 * @param absolutFilePath ruta absoluta del archivo
-	 * @return mimeType del archivo pasado como argumento
-	 */
-	public String getMimeTypeWithTika(String absolutFilePath) {
-				
-		String mimeType = "";		
-		
-		Tika tika = new Tika();
-		File file = new File(absolutFilePath);
-		try {
-			mimeType = tika.detect(file);
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		
-		/*
-		java.nio.file.Path source = Paths.get(absolutFilePath);
-		try {
-			result = Files.probeContentType(source);			
-			System.out.println(result);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		*/		
-		return mimeType;		 
-	}
-	
-	
-	/**
-	 * Convierte una cadena Hexadecimal en un arreglo de bytes
-	 * @param s cadena hexadecimal
-	 * @return arreglo de bytes resultantes de la conversion de la cadena hexadecimal
-	 */
-	public static byte[] hexStringToByteArray(String s) {
-	    byte[] b = new byte[s.length() / 2];
-	    for (int i = 0; i < b.length; i++) {
-	      int index = i * 2;
-	      int v = Integer.parseInt(s.substring(index, index + 2), 16);
-	      b[i] = (byte) v;
-	    }
-	    return b;
-	  }
-	
-	/**
-	   * Converts a byte array into a hex string.
-	   * @param byteArray the byte array source
-	   * @return a hex string representing the byte array
-	   */
-	  public static String byteArrayToHexString(final byte[] byteArray) {
-	      if (byteArray == null) {
-	          return "";
-	      }
-	      return byteArrayToHexString(byteArray, 0, byteArray.length);
-	  }
-	  
-	  public static String byteArrayToHexString(final byte[] byteArray, int startPos, int length) {
-	      if (byteArray == null) {
-	          return "";
-	      }
-	      if(byteArray.length < startPos+length){
-	          throw new IllegalArgumentException("startPos("+startPos+")+length("+length+") > byteArray.length("+byteArray.length+")");
-	      }
-//	      int readBytes = byteArray.length;
-	      StringBuilder hexData = new StringBuilder();
-	      int onebyte;
-	      for (int i = 0; i < length; i++) {
-	          onebyte = ((0x000000ff & byteArray[startPos+i]) | 0xffffff00);
-	          hexData.append(Integer.toHexString(onebyte).substring(6));
-	      }
-	      return hexData.toString();
-	  }
-	
-	  /**
-	   * Serializa el contenedor BDOC pasado como argumento
-	   * @param container Contenedor que se desea serializar
-	   * @param filePath ruta absoluta al archivo serializado
-	   * @throws IOException
-	   */
-	  private static void serialize(Container container, String filePath) throws IOException {
-		  FileOutputStream fileOut = new FileOutputStream(filePath+".bin");
-		  ObjectOutputStream out = new ObjectOutputStream(fileOut);
-		  out.writeObject(container);
-		  out.flush();
-		  out.close();
-		  fileOut.close();
-	  }
-	  
-	  /**
-	   * Deserializa el contenedor BDOC pasado como argumento
-	   * @param filePath ruta absoluta al contenedor que se desea deserializar
-	   * @return contenedor deserializado
-	   * @throws IOException
-	   * @throws ClassNotFoundException
-	   */
-	  private static Container deserialize(String filePath) throws IOException, ClassNotFoundException {
-		  //FileInputStream fileIn = new FileInputStream("container.bin");
-		  FileInputStream fileIn = new FileInputStream(filePath);
-		  ObjectInputStream in = new ObjectInputStream(fileIn);
-		  Container container = (Container) in.readObject();
-		  in.close();
-		  fileIn.close();
-		  return container;
-	  }
-	  
-	  /**
-	   * Deserializa el contenedor BDOC pasado como argumento. Verifica si el contenedor está 
-	   * firmado para escribirlo y leerlo de nuevo.
-	   * @param filePath ruta absoluta al contenedor que se desea deserializar
-	   * @return contenedor deserializado
-	   * @throws IOException
-	   * @throws ClassNotFoundException
-	   * 
-	   */
-	  private Container deserializer1(String filePath) throws IOException, ClassNotFoundException {
-		  //FileInputStream fileIn = new FileInputStream("container.bin");
-		  FileInputStream fileIn = new FileInputStream(filePath);
-		  ObjectInputStream in = new ObjectInputStream(fileIn);
-		  Container container = (Container) in.readObject();
-		  in.close();
-		  fileIn.close();
-
-		  if (container.getSignatures().size() > 0) {
-			  ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-			  container.save(byteOut);
-			  ByteArrayInputStream byteIn = new ByteArrayInputStream(byteOut.toByteArray());
-
-			  //Configuration configuration = initConfig(); // also need to re-initialize configuration settings
-			  Configuration configuration = new Configuration(Configuration.Mode.PROD);		
-			  configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
-			  configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
-			  Container container2 = Container.open(byteIn, configuration);
-
-			  byteOut.close();
-			  byteIn.close();
-			  return container2;
-		  } else {
-			  return container;
-		  }
-	  }
 	  
 }
