@@ -304,7 +304,7 @@ public class MurachiRESTWS {
 	 * @return archivo existente en el servidor y pasado como argumento
 	 * 
 	 * @api {get} /Murachi/0.1/archivos/descargas/{id} Descarga un archivo 
-	 * @apidescription Descarga un archivo existente en el servidor
+	 * @apiDescription Descarga un archivo existente en el servidor
 	 * @apiName Descargas
 	 * @apiGroup Archivos
 	 * @apiVersion 0.1.0
@@ -334,7 +334,7 @@ public class MurachiRESTWS {
 	 * @param fileName nombre o identificador del archivo que se desea descargar
 	 * @return archivo pasado como argumento del servidor
 	 */
-	
+	/*
 	private Response downloadFileFromServer(String fileName) {    
 	    String fileLocation = SERVER_UPLOAD_LOCATION_FOLDER + fileName;
 	    Response response = null;
@@ -360,9 +360,13 @@ public class MurachiRESTWS {
 	      
 	    return response;
 	  }
+	*/
 	
-	
-	/*
+	/**
+	 * Descarga un archivo pasado como argumento del servidor
+	 * @param fileName nombre o identificador del archivo que se desea descargar
+	 * @return archivo pasado como argumento del servidor
+	 */
 	private Response downloadFileFromServer(String fileName) {    
 		logger.info("downloadFileFromServer{"+fileName+"}");
 	    
@@ -393,13 +397,21 @@ public class MurachiRESTWS {
 				logger.debug("numero de dataFile: "+ Integer.toString(c.getDataFiles().size()));
 				logger.debug("numero de firmas: "+ Integer.toString(c.getSignatures().size()));
 				
-			
-				// guardar el contenedor .bdoc
-				c.save(SERVER_UPLOAD_LOCATION_FOLDER + fileName + ".bdoc");
-				logger.debug("	contenedor " + SERVER_UPLOAD_LOCATION_FOLDER + fileName + ".bdoc escrito en sistema de archivos");
-				
-				file = new File(SERVER_UPLOAD_LOCATION_FOLDER + fileName + ".bdoc");
-				
+				if (c.getSignatures().size() > 0) {
+					// guardar el contenedor .bdoc
+					c.save(SERVER_UPLOAD_LOCATION_FOLDER + fileName + ".bdoc");
+					logger.debug("	contenedor " + SERVER_UPLOAD_LOCATION_FOLDER + fileName + ".bdoc escrito en sistema de archivos");
+					
+					file = new File(SERVER_UPLOAD_LOCATION_FOLDER + fileName + ".bdoc");
+				}
+				else 
+				{
+					// el contenedor no esta firmado por lo tanto no se puede descargar
+					logger.error(" error el contenedor no está firmado y no se puede descargar");
+					
+					//return Response.status(500).entity("{\"error\": \"el contenedor no esta firmado y no se puede descargar.\"}").build();
+					return response = Response.status(500).entity("{\"error\": \"el contenedor no esta firmado y no se puede descargar.\"}").type("text/plain").build();
+				}
 			} catch (ClassNotFoundException e) {
 				logger.error(" error ClassNotFoundException");
 							
@@ -421,7 +433,7 @@ public class MurachiRESTWS {
 	    	logger.error(String.format("Inside downloadFile==> FILE NOT FOUND: fileName: %s",
 	    			fileName));
 	       	    	
-	    	response = Response.status(404).entity("{\"fileExist\": false}").
+	    	 return response = Response.status(404).entity("{\"fileExist\": false}").
 	    			type("text/plain").build();
 	    }
 	    
@@ -436,7 +448,7 @@ public class MurachiRESTWS {
 	      
 	    return response;
 	  }
-	*/
+	
 	
 	
 	/**
@@ -1459,7 +1471,7 @@ public class MurachiRESTWS {
 			
 		} catch (InvalidKeyException e) {
 			logger.error("presignPdf ocurrio una excepcion ", e);
-			e.printStackTrace();
+			//e.printStackTrace();
 			//throw new MurachiException(e.getMessage());
 			
 			presignHash.setError(e.getMessage());
@@ -1468,7 +1480,7 @@ public class MurachiRESTWS {
 			
 		} catch (NoSuchProviderException e) {
 			logger.error("presignPdf ocurrio una excepcion ", e);
-			e.printStackTrace();
+			//e.printStackTrace();
 			//throw new MurachiException(e.getMessage());
 			
 			presignHash.setError(e.getMessage());
@@ -1477,7 +1489,7 @@ public class MurachiRESTWS {
 			
 		} catch (NoSuchAlgorithmException e) {
 			logger.error("presignPdf ocurrio una excepcion ", e);
-			e.printStackTrace();
+			//e.printStackTrace();
 			//throw new MurachiException(e.getMessage());
 			
 			presignHash.setError(e.getMessage());
@@ -1486,7 +1498,7 @@ public class MurachiRESTWS {
 			
 		} catch (GeneralSecurityException e) {
 			logger.error("presignPdf ocurrio una excepcion ", e);
-			e.printStackTrace();
+			//e.printStackTrace();
 			//throw new MurachiException(e.getMessage());
 			
 			presignHash.setError(e.getMessage());
@@ -1735,8 +1747,14 @@ public class MurachiRESTWS {
 		return response.build();
 	}
 	
-	
-	// ******* BDOC ***********************************************************
+	// ************************************************************************
+	// ************************************************************************
+	// ************************************************************************
+	// ************************************************************************
+	// ************************************************************************
+	// ************************************************************************
+	// ************************************************************************
+	// *********************************BDOC***********************************
 	
 	/**
 	 * Retorna un JSON con informacion de las firmas del documento BDOC
@@ -1854,6 +1872,129 @@ public class MurachiRESTWS {
 		//jsonSignatures.put("validation", "executed");				
 		return jsonSignatures;
 	}
+	
+	/**
+	 * Retorna un JSON con informacion de las firmas del documento BDOC
+	 * @param serializedBDOC archivo BDOC serializado
+	 * @return JSON con informacion de las firmas del documento BDOC
+	 */
+	private JSONObject getSignaturesInformation(Container container) {
+	
+		logger.debug("getSignaturesInformation()");
+		System.out.println("getSignaturesInformation()");
+		
+		JSONObject jsonSignatures = new JSONObject();
+
+		JSONArray jsonSignaturesArray = new JSONArray();
+		JSONArray jsonContainerValidationExceptionArray = new JSONArray();
+		
+		//java.nio.file.Path path = Paths.get(serializedBDOC);
+		//String idFile = path.getFileName().toString();
+		
+		
+		Security.addProvider(new BouncyCastleProvider());
+		//Container container = null;
+		
+		Configuration configuration = new Configuration(Configuration.Mode.PROD);
+		
+		configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+		
+		configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		/*
+		try
+		{
+			//container = Container.open(serializedBDOC, configuration);
+			//logger.debug("Container.open("+serializedBDOC+", DIGIDOC4J_CONFIGURATION)");
+			container = deserialize();
+			
+			
+		} catch(DigiDoc4JException e) 
+		{
+			jsonSignatures.put("error", "File is not a valid BDOC container");
+			return jsonSignatures;
+		}
+		*/
+		
+		int numberOfSignatures = container.getSignatures().size();
+		if (numberOfSignatures == 0){
+			jsonSignatures.put("signatureNumber", "0");
+			System.out.println("signatureNumber: 0");
+		}else{
+			//jsonSignatures.put("fileExist", "true");
+			//System.out.println("fileExist: true");
+			
+			//jsonSignatures.put("fileId", idFile);
+			//jsonSignatures.put("mimeType", "application/vnd.etsi.asic-e+zip");
+			
+			/*
+			// informacion de archivos dentro del contenedor
+			if (container.getDataFiles().size() > 0){
+				jsonSignatures.put("numberOfDataFiles", container.getDataFiles().size()); 
+				jsonSignatures.put("dataFiles", getJSONFromBDOCDataFiles(container.getDataFiles()));
+				System.out.println(" dataFiles:  " + getJSONFromBDOCDataFiles(container.getDataFiles()).toString());
+			}else{
+				System.out.println(" dataFiles:  == 0");
+			}
+			*/
+		
+			jsonSignatures.put("numberOfSignatures", numberOfSignatures);
+			
+			System.out.println("->container.validate()");
+			ValidationResult validationResult = container.validate();
+			System.out.println("...container.validate()");
+			
+			
+			List<DigiDoc4JException> exceptions = validationResult.getContainerErrors();
+			System.out.println("...validationResult.getContainerErrors()");
+			
+			boolean isDDoc = container.getDocumentType() == DocumentType.DDOC;
+			
+			if (exceptions.size() > 0){
+				jsonSignatures.put("containerValidation", false);
+				
+				for (DigiDoc4JException exception : exceptions) {
+					JSONObject containerException = new JSONObject();
+					
+					if (isDDoc && isWarning(((DDocContainer) container).getFormat(), exception)){
+						System.out.println("    Warning: " + exception.toString());
+						
+				    }
+				    else{
+				    	System.out.println((isDDoc ? "  " : "   Error_: ") + exception.toString());
+				    	
+				    }
+					containerException.put("containerValidationException", exception.toString());
+				    jsonContainerValidationExceptionArray.put(containerException);
+				}
+			    if (isDDoc && (((ValidationResultForDDoc) validationResult).hasFatalErrors())) {
+			    	jsonSignatures.put("validationResultForDDocHasFatalErrors", true);
+			    	return jsonSignatures; 
+			    }
+			    jsonSignatures.put("containerValidationExceptions", jsonContainerValidationExceptionArray);
+				
+				
+			}else{
+				jsonSignatures.put("containerValidation", true);
+				
+				HashMap<String, String> signatureInformation;
+				for (int i=0; i< numberOfSignatures; i++) {
+					System.out.println("===== firma " + i + " =====");
+					signatureInformation = verifyBDOCSignature(container.getSignature(i), container.getDocumentType());
+					System.out.println("signatureInformation.size " + signatureInformation.size());
+					
+					JSONObject jo = getJSONFromASignature(signatureInformation);
+					//System.out.println("jo:  " + jo.toString());
+					jsonSignaturesArray.put(jo);					
+				}
+								
+				jsonSignatures.put("signatures", jsonSignaturesArray);								
+				System.out.println(jsonSignatures.toString());				
+			}			
+		}
+		
+		return jsonSignatures;
+	}
+	
 	
 	/**
 	 * Retorna un JSON con informacion de los DataFiles incluidos en el contenedor
@@ -1976,6 +2117,10 @@ public class MurachiRESTWS {
 		return signatureMap;
 	}
 	
+	// ************************************************************************
+	// ************************************************************************
+	// ************************************************************************
+	// ****************************RECURSOS BDOC*******************************
 	
 	/**
 	 * Ejecuta el proceso de presign o preparacion de firma de un archivo en formato BDOC.
@@ -2328,20 +2473,42 @@ public class MurachiRESTWS {
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
 	
+	
+	// ********************************************************************************
+	// ********************************************************************************
 	// ********************************************************************************
 	// revision de recursos para que cada uno de ellos realice operaciones sobre un 
 	// contenendor BDOC y siempre finalice con el contenedor serializado en el sistema
 	// de archivos
+	// ********************************************************************************
+	// ********************************************************************************
+	// ********************************************************************************
 	
-	
-	
+		
 	/**
 	 * Crea un contenedor BDOC con los archivos subidos del formulario, lo serializa y 
 	 * retorna el identificados unico del contenedor.
 	 * 
-	 * @param formParams parametros del formulario
+	 * @param formParams parametros del formulario.
 	 *  
-	 * @return  identificador unico del contenedor creado
+	 * @return  identificador unico del contenedor creado.
+	 * 
+	 * 
+	 * @api {post} /Murachi/0.1/archivos/bdocs/cargas Crea un contenedor BDOC.
+	 * @apiName BDocCargas
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * @apiDescription Crea un contenedor BDOC con los archivos subidos
+	 * a través del formulario, serializa el contenedor y retorna el identificador único del mismo.
+	 * 
+	 * @apiSuccess {String} containerId Identificador único del contenedor BDOC creado.
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "no se pudo crear el contenedor; falló la serialización."
+	 *     }
+	 * 
 	 */
 	@POST
 	@Path("/bdocs/cargas")
@@ -2394,7 +2561,7 @@ public class MurachiRESTWS {
 			e1.printStackTrace();
 			
 			result = "error al serializar el archivo"+fileId;
-			result = "\"error\":\"no se pudo crear el contenedor\"";
+			result = "\"error\":\"no se pudo crear el contenedor; falló la serialización.\"";
 			return Response.status(500).entity(result).build();
 		}
 		result = "\"containerId\":\""+ fileId +"\"";
@@ -2412,6 +2579,24 @@ public class MurachiRESTWS {
 	 * @param containerId identificador del contenedor pasado en la URL
 	 *  
 	 * @return identificador del contenedor
+	 * 
+	 * 
+	 * @api {post} /Murachi/0.1/archivos/bdocs/cargas/{containerId} Agrega archivo a contenedor.
+	 * @apiName BDocCargasAgrega
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * @apiDescription Agrega el (los) archivo(s) subidos a través del formulario al 
+	 * contenedor BDOC identificado por containerId, serializa el contenedor y retorna 
+	 * el identificador único del mismo.
+	 * 
+	 * @apiSuccess {String} containerId Identificador único del contenedor BDOC.
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "no se pudo agregar el archivo al contenedor."
+	 *     }
+	 * 
 	 */
 	@POST
 	@Path("/bdocs/cargas/{containerId}")
@@ -2450,6 +2635,17 @@ public class MurachiRESTWS {
 			Container c;
 			
 			c = deserialize(containerToOpen);
+						
+			int signatureNumber = c.getSignatures().size();							
+			logger.debug("	signatureNumber: "+ Integer.toString(signatureNumber));
+			
+			if (signatureNumber > 0) 
+			{
+				// el archivo esta firmado y no se puede agregar un archivo adicional				
+				logger.error("el contenedor está firmado y no se puede eliminar el archivo.");
+				return Response.status(200).entity("{\"error\": \"el contenedor está firmado y no se puede agregar archivo\"}").type("text/plain").build();
+			}
+			
 			
 			Map<String, List<FormDataBodyPart>> fieldsByName = formParams.getFields();
 			
@@ -2470,7 +2666,7 @@ public class MurachiRESTWS {
 		    }
 			// se debe serializar no guardar
 					
-			String[] array = containerId.split("\\.bin");
+			//String[] array = containerId.split("\\.bin");
 			
 			// establecer el nombre del archivo a serializar 
 			serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized";
@@ -2504,10 +2700,36 @@ public class MurachiRESTWS {
 		
 	
 	/**
-	 * Retorna el numero de dataFile que se encuentran en un contenedor
+	 * Retorna el numero de dataFile que se encuentran en un contenedor.
 	 * 
 	 * @param containerId
-	 * @return
+	 * @return numero de archivos almacenados en el contenedor
+	 * 
+	 * @api {get} /Murachi/0.1/archivos/bdocs/archivos/{containerId} Número de archivos de contenedor.
+	 * @apiName BDocNumeroDeArchivos
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * 
+	 * @apiParam {String} containerId identificador únicp del contenedor BDOC que se encuentra en el servidor.
+	 * 
+	 * @apiDescription Retorna el número de archivos que se encuentran dentro del contendor BDOC.
+	 * 
+	 * @apiSuccess {String} dataFileNumber Número de archivos que se encuentran en el contendor BDOC.
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "error interno al leer el contenedor."
+	 *     }
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "no se pudo leer el contenedor."
+	 *     }
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "error": "el contenedor con identificador containerId no existe ."
+	 *     }
+	 * 
 	 */
 	@GET
 	@Path("/bdocs/archivos/{containerId}")
@@ -2575,20 +2797,21 @@ public class MurachiRESTWS {
 	 * @param dataFileId identificador del archivo que se desea descargar. Los archivos que
 	 * se encuentran dentro de un contenedor se comienzan a identificar con cero (0).
 	 * 
-	 * @return 
+	 * @return archivo a descagar
 	 * 
-	 * @api {get} /Murachi/0.1/archivos/bdocs/archivos/{fileId}/{dataFileId} Descarga un archivo del Contenedor 
-	 * @apidescription Descarga un archivo existente dentro del contenedor BDOC. Un contenedor BDOC puede tener uno
+	 * @api {get} /Murachi/0.1/archivos/bdocs/archivos/{containerId}/{dataFileId} Descarga un archivo del contenedor.
+	 * @apiDescription Descarga un archivo existente dentro del contenedor BDOC. Un contenedor BDOC puede tener uno
 	 * o varios archivos. Los identificadores de archivos dentro de un contenedor BDOC se comienzan e enumerar con
 	 * cero (0).
 	 * 
-	 * @apiName BDocsDescarga
+	 * @apiName BDocsDescargaArchivo
 	 * @apiGroup BDOCS
 	 * @apiVersion 0.1.0
 	 * 
-	 * @apiParam {String} fileId identificador del contenedor BDOC que se encuentra en el servidor
+	 * @apiParam {String} containerId identificador del contenedor BDOC que se encuentra en el servidor
 	 * @apiParam {Number} dataFileId identificador del archivo que se desea descargar. Los archivos que
 	 * se encuentran dentro de un contenedor se comienzan a identificar con cero (0).
+	 * 	 
 	 * 
 	 * @apiExample Example usage:
      * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee/0
@@ -2599,6 +2822,15 @@ public class MurachiRESTWS {
 	 *     {
 	 *       "fileExist": false
 	 *     }
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "error": "el dataFileId solicitado no existe."
+	 *     }     
+	 *     HTTP/1.1 500 Internal server Error
+	 *     {
+	 *       "error": "no se pudo leer el contenido del contenedor."
+	 *     }
+	 *     
 	 */
 	@GET
 	@Path("/bdocs/archivos/{containerId}/{dataFileId}")
@@ -2674,10 +2906,40 @@ public class MurachiRESTWS {
 	
 	
 	/**
-	 * Elimina un archivo DataFile de un contendor existente
+	 * Elimina un archivo DataFile de un contendor existente.
 	 * 
-	 * @param containerId identificador del contenedor para eliminar su dataFile
+	 * @param containerId identificador del contenedor para eliminar su dataFile.
 	 * @return verificación de eliminación
+	 * 
+	 * @api {get} /Murachi/0.1/archivos/bdocs/archivos/papelera/{containerId}/{dataFileId} Elimina un archivo del contenedor. 
+	 * @apiDescription Elimina un archivo existente dentro del contenedor BDOC. Un contenedor BDOC puede tener uno
+	 * o varios archivos. Los identificadores de archivos dentro de un contenedor BDOC se comienzan e enumerar con
+	 * cero (0). Para poder eliminar un archivo de un contenedor no deben existir firmas.
+	 * 
+	 * @apiName BDocsEliminaArchivos
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * 
+	 * @apiParam {String} containerId identificador del contenedor BDOC que se encuentra en el servidor.
+	 * @apiParam {Number} dataFileId identificador del archivo que se desea eliminar. Los archivos que
+	 * se encuentran dentro de un contenedor se comienzan a identificar con cero (0).
+	 *
+	 * @apiSuccess {String} mensaje archivo eliminado correctamente
+	 * 
+	 * @apiExample Example usage:
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/papelera/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee/0
+	 * 	 
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "fileExist": false
+	 *     }
+	 *     HTTP/1.1 500 Internal server Error
+	 *     {
+	 *       "error": "no se pudo leer el contenido del contenedor."
+	 *     }
+	 * 
 	 */
 	@GET
 	@Path("/bdocs/archivos/papelera/{containerId}/{dataFileId}")
@@ -2775,10 +3037,40 @@ public class MurachiRESTWS {
 	
 	
 	/**
-	 * Retorna lista de los dataFile que se encuentran en un contenedor
+	 * Retorna lista de los dataFile que se encuentran en un contenedor.
 	 * 
-	 * @param containerId identificador del contenedor
-	 * @return lista de los dataFile que se encuentran en un contenedor
+	 * @param containerId identificador del contenedor.
+	 * @return lista de los dataFile que se encuentran en un contenedor.
+	 * 
+	 * @api {get} /Murachi/0.1/archivos/bdocs/archivos/lista/{containerId} Lista de archivos del contenedor. 
+	 * @apiDescription Retorna una lista de los archivos que se encuentran dentro del contenedor BDOC.
+	 * 
+	 * @apiName BDocsListaArchivos
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * 
+	 * @apiParam {String} containerId identificador del contenedor BDOC que se encuentra en el servidor.
+	 * 
+	 * @apiSuccess {String} dataFiles lista de archivos que se encuentran en el contenedor.
+	 * 
+	 * @apiExample Example usage:
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/lista/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee
+	 * 	 
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "error": "El contenedor con identificador containerId no existe."
+	 *     }
+	 *     HTTP/1.1 500 Internal server Error
+	 *     {
+	 *       "error": "no se pudo leer el contenido del contenedor."
+	 *     }
+     *     HTTP/1.1 500 Internal server Error
+	 *     {
+	 *       "error": "El contenedor tiene un número menor que cero de archivos."
+	 *     }
+	 *  
 	 */
 	@GET
 	@Path("/bdocs/archivos/lista/{containerId}")
@@ -2809,9 +3101,7 @@ public class MurachiRESTWS {
 			Container c = null;
 			String dataFileName = "";
 			Long dataFileSize = (long) 0;
-			
-			
-		
+					
 			try {
 				c = deserialize(fullPathBdocFile);
 				logger.debug("contenedor deserializado: " + fullPathBdocFile);
@@ -2846,17 +3136,23 @@ public class MurachiRESTWS {
 				jsonDataFile.put("dataFiles", getJSONFromBDOCDataFiles(c.getDataFiles()));
 				response = Response.status(200).entity(jsonDataFile.toString()).build();
 			}
-			else
+			else if (dataFileNumber == 0)
 			{
 				logger.debug("dataFileNumber: "+ Integer.toString(dataFileNumber));
 				jsonDataFile.put("dataFileNumber", Integer.toString(dataFileNumber));
 				response = Response.status(200).entity(jsonDataFile.toString()).build();
-			}		
+			}
+			else
+			{
+				logger.error("El contenedor con id: "+containerId+ " tiene un número menor que cero de dataFiles.");
+		    	jsonDataFile.put("error", "El contenedor tiene un número menor que cero de archivos");
+		    	response = Response.status(500).entity(jsonDataFile.toString()).build();
+			}
 			
 													    	
 	    } else {
 	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
-	    	jsonDataFile.put("error", "El contenedor con id: "+containerId+ " no existe.");
+	    	jsonDataFile.put("error", "El contenedor con identificador "+containerId+ " no existe.");
 	    	response = Response.status(404).entity(jsonDataFile.toString()).build();
 	    }
 		return response;
@@ -2865,10 +3161,31 @@ public class MurachiRESTWS {
 		
 	
 	/**
-	 * Retorna el numero de firmas que tiene en un contenedor
+	 * Retorna el numero de firmas que tiene en un contenedor.
 	 * 
-	 * @param containerId
-	 * @return numero de firmas del contenedor
+	 * @param containerId identificador del contenedor BDOC.
+	 * @return numero de firmas del contenedor.
+	 *
+	 * @api {get} /Murachi/0.1/archivos/bdocs/firmas/{containerId} Número de firmas de un contenedor.
+	 * @apiName BDocNumeroFirmas
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * 
+	 * @apiParam {String} containerId identificador único del contenedor BDOC que se encuentra en el servidor.
+	 * 
+	 * @apiDescription Retorna el número de firmas del contendor BDOC.
+	 * 
+	 * @apiSuccess {String} signatureNumber Número de firmas del contendor BDOC.
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "error interno al leer el contenedor."
+	 *     }
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "error": "el contenedor con identificador containerId no existe ."
+	 *     } 
 	 */
 	@GET
 	@Path("/bdocs/firmas/{containerId}")
@@ -2932,7 +3249,30 @@ public class MurachiRESTWS {
 	 * @param containerId identificador del contenedor para eliminar la firma
 	 * @param signatureId identificador de la firma a eliminar
 	 * 
-	 * @return identificador del contenedor
+	 * @return identificador del contenedor.
+	 * 
+	 * * @api {get} /Murachi/0.1/archivos/bdocs/firmas/papelera{containerId}/{signatureId} Elimina una firma de un contenedor.
+	 * @apiName BDocEliminaFirmas
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * 
+	 * @apiParam {String} containerId identificador único del contenedor BDOC que se encuentra en el servidor.
+	 * @apiParam {Number} signatureId identificador de firma a eliminar.
+	 * 
+	 * @apiDescription Elimina una firma del contendor BDOC.
+	 * 
+	 * @apiSuccess {String} mensaje firma eliminada correctamente
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "no se pudo leer el contenido del contenedor."
+	 *     }
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "error": "el contenedor con identificador containerId no existe ."
+	 *     } 
+	 * 
 	 */
 	@GET
 	@Path("/bdocs/firmas/papelera/{containerId}/{signatureId}")
@@ -2982,7 +3322,7 @@ public class MurachiRESTWS {
 			
 			if (signatureNumber < 1) 
 			{
-				// el archivo esta firmado y no se puede eliminar el dataFile
+				// el archivo no esta firmado y no se puede eliminar la firma
 				response = Response.status(200).entity("{\"error\": \"el contenedor no está firmado\"}").type("text/plain").build();
 				logger.error("el contenedor no está firmado.");
 			}
@@ -2990,7 +3330,7 @@ public class MurachiRESTWS {
 			{				
 				if (signatureId >= signatureNumber)
 				{
-					// el dataFileId no es valido
+					// el signatureId no es valido
 					response = Response.status(200).entity("{\"error\": \"el identificador de la firma a eliminar no es valido\"}").type("text/plain").build();
 					logger.error("el identificador de la firma a eliminar no es valido.");
 				}
@@ -3022,9 +3362,127 @@ public class MurachiRESTWS {
 		return response;
 			
 	}
+
 	
-	// ------------> a seguir
-	
+	/**
+	 * Retorna una lista con información de las firmas que tiene en un contenedor.
+	 * 
+	 * @param containerId identificador del contenedor BDOC.
+	 * @return lista con información de las firmas que tiene en un contenedor.
+	 *
+	 * @api {get} /Murachi/0.1/archivos/bdocs/firmas/lista/{containerId} Lista de firmas de un contenedor.
+	 * @apiName BDocListaFirmas
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * 
+	 * @apiParam {String} containerId identificador único del contenedor BDOC que se encuentra en el servidor.
+	 * 
+	 * @apiDescription Retorna una lista con la información de las firmas del contendor BDOC.
+	 * 
+	 * @apiSuccess {Number} numberOfSignatures Número de firmas existentes en el archivo.
+	 * @apiSuccess {Object[]} signatures Lista de firmas del contenedor BDOC
+ 	 * @apiSuccess {String} signatures.signaturePostalCode Código postal del lugar donde se realiza la firma.
+	 * @apiSuccess {String} signatures.signerCertificateSerial Serial del certificado del firmante.
+	 * @apiSuccess {String} signatures.signatureState Estado del lugar donde se realiza la firma.
+	 * @apiSuccess {String} signatures.signatureProfile Perfil de la firma.
+	 * @apiSuccess {String} signatures.signatureMethod Algoritmo de firma utilizado.
+	 * @apiSuccess {String} signatures.signatureId identificador de la firma.
+	 * @apiSuccess {String} signatures.signatureSigningTime Hora y fecha en que se realiza la firma.
+	 * @apiSuccess {Boolean} signatures.signerCertificateIsValid El certificado firmante es válido.
+	 * @apiSuccess {String} signatures.signerCertificateIssuer Emisor del certificado firmante. 
+	 * @apiSuccess {String} signatures.signatureCity Ciudad donde se realiza la firma.
+	 * @apiSuccess {String} signatures.signatureValidationException Exepciones de la validación de la firma.
+	 * @apiSuccess {String} signatures.isValid Firma electrónica válida.
+	 * @apiSuccess {String} signatures.signerCertificateIssuer Emisor del certificado firmante. 
+	 * @apiSuccess {String} signatures.signatureCountry País donde se realiza la firma.
+	 *
+	 * @apiSuccess {Boolean}   containerValidation: Especifica si el contenedor posee una estructura válida.  
+
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "error interno al leer el contenedor."
+	 *     }
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "El contenedor tiene un número menor que cero de firmas"
+	 *     }
+
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "error": "el contenedor con identificador containerId no existe ."
+	 *     } 
+	 */
+	@GET
+	@Path("/bdocs/firmas/lista/{containerId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getSignaturesList(@PathParam("containerId")  String containerId) {
+		logger.info("/bdocs/firmas/lista/"+containerId);
+								
+		String fullPathBdocFile = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized.bin";
+		logger.debug(fullPathBdocFile);
+		
+		
+		JSONObject jsonSignatures = new JSONObject();
+		int signatureNumber = 0;
+		
+		Response response;
+				
+		// Retrieve the file
+	    File file = new File(fullPathBdocFile);
+	    if (file.exists()) {
+	    		    	
+	    	Security.addProvider(new BouncyCastleProvider());
+						
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+		
+			Container c;
+			
+			try {
+				c = deserialize(fullPathBdocFile);
+				
+				signatureNumber = c.getSignatures().size();				
+				
+				logger.debug("signatureNumber: "+ Integer.toString(signatureNumber));
+				
+				if (signatureNumber > 0) {					
+					jsonSignatures = getSignaturesInformation(c);					
+				}
+				else if(signatureNumber == 0) 
+				{
+					logger.debug("numberOfSignatures: "+ Integer.toString(signatureNumber));
+					jsonSignatures.put("numberOfSignatures", Integer.toString(signatureNumber));
+					response = Response.status(200).entity(jsonSignatures.toString()).build();
+				}
+				else
+				{
+					logger.error("El contenedor con id: "+containerId+ " tiene un número menor que cero de firmas.");
+			    	jsonSignatures.put("error", "El contenedor tiene un número menor que cero de firmas");
+			    	response = Response.status(500).entity(jsonSignatures.toString()).build();
+				}
+							
+				response = Response.status(200).entity(jsonSignatures.toString()).build();
+				
+			} catch (ClassNotFoundException e) {
+							
+				jsonSignatures.put("error", "error interno al leer el contenedor");				
+				response = Response.status(500).entity(jsonSignatures.toString()).build();
+
+			} catch (IOException e) {
+				
+				jsonSignatures.put("error", "no se pudo leer el contenedor");				
+				response = Response.status(500).entity(jsonSignatures.toString()).build();
+			}										    	
+	    } else {
+	    	logger.error("El contenedor con id: "+containerId+ " no existe.");
+	    	jsonSignatures.put("error", "El contenedor con id: "+containerId+ " no existe.");
+	    	response = Response.status(404).entity(jsonSignatures.toString()).build();
+	    }
+		return response;		
+	}
 	
 	
 	
@@ -3034,6 +3492,80 @@ public class MurachiRESTWS {
 	 * @param presignPar Parametros para preparar la firma.
 	 * @return hash del archivo a firmar del lado del cliente.
 	 * @throws MurachiException
+	 * 
+	 * @api {post} /Murachi/0.1/archivos/bdocs/firmas/pre Prepara la firma de un contenedor BDOC.
+	 * @apiName BDocsFirmasPre
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * @apiDescription Prepara la firma de un contenedor BDOC existente en el servidor. 
+	 * Se debe pasar un JSON con la siguiente estructura:
+	 *
+	 * {"fileId":"file_id", "certificate":"hex_cert_value", 
+	 * "city":"ciudad", "state":"estado", "postalCode":"codigoPostal", 
+	 * "country":"pais", "role":"rol"}
+	 *  
+	 *  fileId: corresponde al identificador del contenedor que se encuentra en el servidor y se desea firmar.
+	 *  
+	 *  certificate: corresponde al certificado del firmante en formato hexadecimal.
+	 *  
+	 *  city: corresponde a la ciudad en la que se realiza la firma.
+	 *  
+	 *  state: corresponde al estado en el que se reailza la firma.
+	 *  
+	 *  postalCode: corresponde al código postal del lugar donde se realiza la firma.
+	 *  
+	 *  country: corresponde al país donde se realiza la firma.
+	 *  
+	 *  role: corresponde al rol del firmante.
+	 *  
+	 * @apiSuccess {String} hash Reseña o hash del contenedor que se debe cifrar con la clave privada protegida por el
+	 * dispositivo criptográfico.
+	 * 
+	 * @apiExample Example usage:
+	 * 
+	 * var parameters = JSON.stringify({
+	 *                             "fileId":fileId,
+	 *                             "certificate":cert.hex,
+	 *                             "city":"Merida",
+     *                             "state":"Merida",
+	 *                             "postalCode":"5101",
+	 *                             "country":"Venezuela",
+	 *                             "role":"Desarrollador"
+	 *                             });
+	 * 
+	 * $.ajax({
+     *           url: "https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/firmas/pre",
+     *           type: "post",
+     *           dataType: "json",
+     *           data: parameters,
+     *           contentType: "application/json",
+     *           success: function(data, textStatus, jqXHR){
+	 *                              var json_x = data;
+     *                              var hash = json_x['hash']; 
+     *                              alert("hash recibido del servidor "+hash);
+     *           },
+	 *           error: function(jqXHR, textStatus, errorThrown){
+	 *                              //alert('error: ' + textStatus);
+	 *                              //var responseText = jQuery.parseJSON(jqXHR.responseText);
+	 *                              alert('ajax error function: ' + jqXHR.responseText);
+	 *                             
+	 *           }
+     *  });
+	 *
+	 * 
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "hash": "",
+	 *       "error": "Error en el certificado del firmante"
+	 *     }
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "error": "el contenedor con identificador containerId no existe ."
+	 *     }
+	 * 
+	 * 
 	 */
 	@POST
 	@Path("/bdocs/firmas/pre")
@@ -3045,7 +3577,7 @@ public class MurachiRESTWS {
 		
 		PresignHash presignHash = new PresignHash();
 
-		// obtener el id del archivo a firmaer
+		// obtener el id del archivo a firmar
 		String containerId = presignPar.getFileId();
 		
 		// cadena con el certificado
@@ -3067,8 +3599,8 @@ public class MurachiRESTWS {
 		String role = presignPar.getRole();
 		logger.debug("	role: " + role);
 		
-		Boolean addSignature = presignPar.getAddSignature();
-		logger.debug("	addSignature: " + addSignature.toString());
+		//Boolean addSignature = presignPar.getAddSignature();
+		//logger.debug("	addSignature: " + addSignature.toString());
 		
 		CertificateFactory cf;
 		X509Certificate signerCert;
@@ -3101,6 +3633,7 @@ public class MurachiRESTWS {
 				
 		try
 		{
+			/*
 			Security.addProvider(new BouncyCastleProvider());
 			Container container = null;
 		
@@ -3150,6 +3683,62 @@ public class MurachiRESTWS {
 			// serializar el archivo 
 			serialize(container, serializedContainerId);
 			logger.debug("serializado el contenedor: " + serializedContainerId);
+			*/
+			
+			
+			Security.addProvider(new BouncyCastleProvider());
+			Container container = null;			
+		
+			Configuration configuration = new Configuration(Configuration.Mode.PROD);		
+			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+
+			
+			// deserializar el contenedor
+			//container = deserialize(fullPathContainerId);
+			container = deserializer1(fullPathContainerId);
+			
+			logger.debug("deserializado el contenedor: " + fullPathContainerId);
+
+			
+			SignatureParameters signatureParameters = new SignatureParameters();
+			SignatureProductionPlace productionPlace = new SignatureProductionPlace();
+			productionPlace.setCity(city);
+			productionPlace.setStateOrProvince(state);
+			productionPlace.setPostalCode(postalCode);
+			productionPlace.setCountry(country);
+			signatureParameters.setProductionPlace(productionPlace);
+			logger.debug("container setProductionPlace");
+			
+			signatureParameters.setRoles(asList(role));
+			container.setSignatureParameters(signatureParameters);
+			container.setSignatureProfile(SignatureProfile.B_BES);
+				
+			cf = CertificateFactory.getInstance("X.509");
+		
+			InputStream in = new ByteArrayInputStream(hexStringToByteArray(certHex));
+		
+			signerCert = (X509Certificate) cf.generateCertificate(in);
+		
+			signedInfo = container.prepareSigning(signerCert);
+		
+			hashToSign = byteArrayToHexString(signedInfo.getDigest());
+		
+			System.out.println("presignBdoc - hash: " + hashToSign);
+			logger.debug("hash to sign: " + hashToSign);
+		
+			
+			//String[] array = containerId.split("\\.bin");
+			
+			// establecer el nombre del archivo a serializar 
+			String serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized";
+			logger.debug("serializedContainerId: " + serializedContainerId);
+		
+			// serializar el archivo 
+			serialize(container, serializedContainerId);
+			logger.debug("serializado el contenedor: " + serializedContainerId);
+			
+			
 				
 		} catch(IOException e)
 		{
@@ -3190,6 +3779,47 @@ public class MurachiRESTWS {
 	 * 
 	 * @throws IOException
 	 * @throws MurachiException
+	 * 
+	 * @api {post} /Murachi/0.1/archivos/firmados/bdocs/resenas Completa la firma de un contenedor BDOC.
+	 * @apiName BdocFirmasPost
+	 * @apiGroup BDOCS
+	 * @apiVersion 0.1.0
+	 * @apiDescription Completa la firma de un contenedor BDOC. Recibe el hash cifrado del cliente y  
+	 * completa la firma del contenedor BDOC.
+	 * 
+	 * @apiSuccess {String} signedFileId Identificador único del contenedor firmado en el servidor.
+	 * 
+	 * @apiExample Example usage:
+	 * 
+	 * $.ajax({
+     *           url: "https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/firmas/post",
+     *           type: "post",
+     *           dataType: "json",
+     *           data: JSON.stringify({
+     *           	"signature":signature.hex, 
+     *           	"containerId":"351d6f62-4653-48d8-8a41-6145b53f3921"
+     *           	}),
+     *           contentType: "application/json",
+     *           success: function(data, textStatus, jqXHR){
+     *                              alert('Archivo firmado correctamente: ' + data['signedFileId']);
+     *           },
+	 *           error: function(jqXHR, textStatus, errorThrown){
+	 *                              alert('error en pdfs/resenas: ' + textStatus);
+	 *           }
+     *  });
+	 * 
+	 * 
+	 * 
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "Error en proceso de deserialización y completación de firma"
+	 *     }
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "error": "el contenedor con identificador containerId no existe ."
+	 *     }
+	 * 
 	 */
 	@POST
 	@Path("/bdocs/firmas/post")
@@ -3215,14 +3845,70 @@ public class MurachiRESTWS {
 		System.out.println("serializedContainerId: " + serializedContainerId);
 		logger.debug("	serializedContainerId: " + serializedContainerId);
 		
+		File f = new File(serializedContainerId);
+		
+		if (!f.exists()) {
+			logger.error("el contenedor "+ serializedContainerId + " no existe.");
+			String result = "\"error\":\"el contenedor "+ serializedContainerId + " no existe\"";
+			return Response.status(404).entity(result).build();	
+		}
+		
 		try {
 			Container deserializedContainer = deserialize(serializedContainerId);
 			logger.debug("	deserializado el contenedor "+ serializedContainerId);
 			
+			/*
+			if (deserializedContainer.getSignatures().size() > 0) {
+		    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+		    	deserializedContainer.save(byteOut);
+		        ByteArrayInputStream byteIn = new ByteArrayInputStream(byteOut.toByteArray());
+		        
+		        //Configuration configuration = initConfig(); // also need to re-initialize configuration settings
+		        
+		        Configuration configuration = new Configuration(Configuration.Mode.PROD);		
+		    	configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+		    	configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);        
+		        
+		        Container container2 = Container.open(byteIn, configuration);
+		        
+		        byteOut.close();
+		        byteIn.close();
+		        //container2.sign(new PKCS12Signer("/tmp/ayzarra.p12", "ayzarra".toCharArray()));
+		        
+		        byte[] signatureInBytes = hexStringToByteArray(signature);
+				
+				container2.signRaw(signatureInBytes);
+				logger.debug("asignada firma al contenedor previamente firmado");
+		        
+		        System.out.println("********numero de firmas deserialize : "+ Integer.toString(container2.getSignatures().size()));
+		        
+		        serialize(container2, SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
+				logger.debug(" serializado el contenedor: " + SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
+
+		    }
+			else
+			{
+				// el contenedor no tiene firmas previas
+				byte[] signatureInBytes = hexStringToByteArray(signature);
+				
+				deserializedContainer.signRaw(signatureInBytes);
+				logger.debug("asignada firma al contenedor sin firmas previas");
+				
+				serialize(deserializedContainer, SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
+				logger.debug(" serializado el contenedor: " + SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");				
+			}
+			*/
+			
 			byte[] signatureInBytes = hexStringToByteArray(signature);
 			
 			deserializedContainer.signRaw(signatureInBytes);
-			logger.debug("asignada firma al contenedor");
+			logger.debug("asignada firma al contenedor " + containerId );
+			
+			serialize(deserializedContainer, SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
+			logger.debug(" serializado el contenedor: " + SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
+			
+			
+			
 			
 			/*
 			//deserializedContainer.save(SERVER_UPLOAD_LOCATION_FOLDER + signedBdoc);
@@ -3230,7 +3916,7 @@ public class MurachiRESTWS {
 			logger.debug(" serializado el contenedor: " + SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
 			*/
 			
-			
+			/*
 			// prueba para evitar que las firmas tengan la misma hora de aplicacion
 
 			// escribir el contendedor
@@ -3246,6 +3932,10 @@ public class MurachiRESTWS {
 			// serializar el contenedor
 			serialize(c, SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
 			logger.debug("	serializado contenedor: " + SERVER_UPLOAD_LOCATION_FOLDER + containerId + "-serialized");
+			*/
+			
+			
+			//c.save(SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bdoc");
 			
 			// eliminar el contenedor guardado
 			//File f = new File(SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bdoc");
@@ -3272,7 +3962,7 @@ public class MurachiRESTWS {
 		message.setMessage("{\"signedFile\":"+ containerId);
 				
 		JSONObject jsonFinalResult = new JSONObject();
-		jsonFinalResult.put("signedFileId", containerId+".bdoc");
+		jsonFinalResult.put("signedFileId", containerId);
 		
 		logger.info(jsonFinalResult.toString());
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
@@ -3353,6 +4043,61 @@ public class MurachiRESTWS {
 		return "prueba exitosa";
 	}
 	
+	@GET
+	@Path("/serializar")
+	@Produces("text/plain")
+	public String serialize()  {
+		
+		logger.debug("recurso /serializar");
+		
+		Security.addProvider(new BouncyCastleProvider());
+		
+		Container c;
+		try {
+			c = deserialize("/tmp/container.bin");
+			logger.debug("deserializado contenedor");
+			
+			logger.debug("numero de firmas: "+ Integer.toString(c.getSignatures().size()));
+			
+			Security.addProvider(new BouncyCastleProvider());
+			
+			//c.sign(new PKCS12Signer("/tmp/ayzarra.p12", "ayzarra".toCharArray()));
+						
+			//c.save("/tmp/deserializado.bdoc");
+			
+			if (c.getSignatures().size() > 0) {
+		    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+		        c.save(byteOut);
+		        ByteArrayInputStream byteIn = new ByteArrayInputStream(byteOut.toByteArray());
+		        
+		        //Configuration configuration = initConfig(); // also need to re-initialize configuration settings
+		        
+		        Configuration configuration = new Configuration(Configuration.Mode.PROD);		
+		    	configuration.loadConfiguration("/tmp/digidoc4j.yaml");
+		    	configuration.setTslLocation("file:///tmp/venezuela-tsl.xml");        
+		        
+		        Container container2 = Container.open(byteIn, configuration);
+		        container2.sign(new PKCS12Signer("/tmp/ayzarra.p12", "ayzarra".toCharArray()));
+		        
+		        System.out.println("********numero de firmas deserialize : "+ Integer.toString(container2.getSignatures().size()));
+		        container2.save("/tmp/deserializado2.bdoc");
+
+		    }
+			
+			
+			
+		} catch (ClassNotFoundException | IOException e) {
+			e.printStackTrace();
+			
+			logger.error("ClassNotFoundException | IOException e");
+			return "error ClassNotFoundException | IOException e";
+			
+		}
+		
+			
+		return "prueba exitosa";
+	}
+	
 	
 	/**
 	 * Crea un contenedor BDOC 
@@ -3421,6 +4166,13 @@ public class MurachiRESTWS {
 		
 	}
 	
+	/**
+	 * Agrega un archivo a un contenedor BDOC existente
+	 * @param is InputStream del archivo
+	 * @param fileName ruta del archivo que se desea agregar
+	 * @param mimeType tipo mime
+	 * @param c contenedor BDOC
+	 */
 	private void addFileToBDOCContainer(InputStream is, String fileName, String mimeType, Container c) {
 		logger.debug("addFileToBDOCContainer(InputStream) ");
 		System.out.println("addFileToBDOCContainer(InputStream)");
@@ -3687,7 +4439,7 @@ public class MurachiRESTWS {
 				
 				
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+
 				e.printStackTrace();
 			}
 			
@@ -4568,6 +5320,42 @@ public class MurachiRESTWS {
 		  in.close();
 		  fileIn.close();
 		  return container;
+	  }
+	  
+	  /**
+	   * Deserializa el contenedor BDOC pasado como argumento. Verifica si el contenedor está 
+	   * firmado para escribirlo y leerlo de nuevo.
+	   * @param filePath ruta absoluta al contenedor que se desea deserializar
+	   * @return contenedor deserializado
+	   * @throws IOException
+	   * @throws ClassNotFoundException
+	   * 
+	   */
+	  private Container deserializer1(String filePath) throws IOException, ClassNotFoundException {
+		  //FileInputStream fileIn = new FileInputStream("container.bin");
+		  FileInputStream fileIn = new FileInputStream(filePath);
+		  ObjectInputStream in = new ObjectInputStream(fileIn);
+		  Container container = (Container) in.readObject();
+		  in.close();
+		  fileIn.close();
+
+		  if (container.getSignatures().size() > 0) {
+			  ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+			  container.save(byteOut);
+			  ByteArrayInputStream byteIn = new ByteArrayInputStream(byteOut.toByteArray());
+
+			  //Configuration configuration = initConfig(); // also need to re-initialize configuration settings
+			  Configuration configuration = new Configuration(Configuration.Mode.PROD);		
+			  configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
+			  configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
+			  Container container2 = Container.open(byteIn, configuration);
+
+			  byteOut.close();
+			  byteIn.close();
+			  return container2;
+		  } else {
+			  return container;
+		  }
 	  }
 	  
 }
