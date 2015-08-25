@@ -718,6 +718,7 @@ public class MurachiRESTWS {
 	 *     }
 	 * 
 	 */
+	/*
 	@GET
 	@Path("/{idFile}")
 	@Produces("application/json")
@@ -768,9 +769,76 @@ public class MurachiRESTWS {
 		}
 		String result = jsonObject.toString();
 		logger.info("/{"+idFile+"}: "+ result);
-		return Response.status(200).entity(result).build();
+		return Response.status(200).entity(result).build();	
+	}
+	*/	
+	@GET
+	@Path("/{idFile}")
+	@Produces("application/json")
+	public Response verifyAFile(@PathParam("idFile") String idFile) throws MurachiException {
+		
+		JSONObject jsonObject = new JSONObject();
+		String result = "";
+		String path = "";
+		
+		// verificar si existe como contenedor BDOC serializado
+		if (checkFileExists(SERVER_UPLOAD_LOCATION_FOLDER + idFile + "-serialized.bin")) {
+		    
+			path = SERVER_UPLOAD_LOCATION_FOLDER + idFile + "-serialized.bin";
+			
+			logger.debug("	verificar contenedor BDOC serializado: " + SERVER_UPLOAD_LOCATION_FOLDER + idFile + "-serialized.bin");
+		    jsonObject = verifySignaturesInBdoc(path, true);
+			result = jsonObject.toString();
+			logger.info("/{"+idFile+"}: "+ result);
+		    	
+		    return Response.status(200).entity(result).build();
+		} 
+		// verificar si existe el archivo
+		else if (checkFileExists(SERVER_UPLOAD_LOCATION_FOLDER + idFile)) {
+			// archivo si existe y es BDOC no serializado
+			path = SERVER_UPLOAD_LOCATION_FOLDER + idFile;
+					
+			String mime = getMimeType(path);
+			System.out.println("mimetype : " + mime);
+			
+			
+			if (mime.equals("application/zip")) {
+				jsonObject = verifySignaturesInBdoc(path, false);
+				result = jsonObject.toString();
+				logger.info("/{"+idFile+"}: "+ result);
+				
+				return Response.status(200).entity(result).build();
+			}
+			// archivo si existe y es un pdf
+			else if (mime.equals("application/pdf")) {
+				path = SERVER_UPLOAD_LOCATION_FOLDER + idFile;
+				
+				jsonObject = verifySignaturesInPdf(path);
+				result = jsonObject.toString();
+				logger.info("/{"+idFile+"}: "+ result);
+				
+				return Response.status(200).entity(result).build();				
+			}
+			// el archivo existe pero es una extension no reconocida
+			else 
+			{
+				jsonObject.put("fileExist", "true");
+				jsonObject.put("error", "extension not supported");
+				return Response.status(200).entity(jsonObject.toString()).build();
+			}			
+		}	
+		// definitivamente el archivo no existe en el sistema de archivos
+		else
+		{
+			jsonObject.put("fileExist", "false");
+			logger.error("fileExist: false");
+			
+			return Response.status(404).entity(jsonObject.toString()).build();
+			 
+		}
 				
 	}
+	
 	
 	/**
 	 * Verifica si un archivo local posee firmas electronicas y retorna informacion
@@ -780,6 +848,7 @@ public class MurachiRESTWS {
 	 * @return JSONObject con informacion de las firmas
 	 * @throws MurachiException 
 	 */
+	/*
 	public JSONObject verifyALocalFile(String idFile) throws MurachiException {
 		
 		System.out.println("verifyALocalFile: " + idFile);
@@ -818,7 +887,7 @@ public class MurachiRESTWS {
 				//jsonObject.put("formato", "BDOC");
 				//jsonObject.put("resultado", "NO IMPLEMENTADO");
 				
-				jsonObject = verifySignaturesInBdoc(file);
+				jsonObject = verifySignaturesInBdoc(file, false);
 			}else{
 				System.out.println("extension no reconocida");
 				jsonObject.put("fileExist", "true");
@@ -828,6 +897,72 @@ public class MurachiRESTWS {
 		}
 		return jsonObject;
 	}
+	*/
+	public JSONObject verifyALocalFile(String idFile) throws MurachiException {
+		
+		JSONObject jsonObject = new JSONObject();
+		String result = "";
+		String path = "";
+		
+		// verificar si existe como contenedor BDOC serializado
+		if (checkFileExists(SERVER_UPLOAD_LOCATION_FOLDER + idFile + "-serialized.bin")) {
+		    
+			path = SERVER_UPLOAD_LOCATION_FOLDER + idFile + "-serialized.bin";
+			
+			logger.debug("	verificar contenedor BDOC serializado: " + SERVER_UPLOAD_LOCATION_FOLDER + idFile + "-serialized.bin");
+		    jsonObject = verifySignaturesInBdoc(path, true);
+			result = jsonObject.toString();
+			logger.info("/{"+idFile+"}: "+ result);
+		    	
+		    return jsonObject;
+		} 
+		// verificar si existe el archivo
+		else if (checkFileExists(SERVER_UPLOAD_LOCATION_FOLDER + idFile)) {
+			// archivo si existe y es BDOC no serializado
+			path = SERVER_UPLOAD_LOCATION_FOLDER + idFile;
+					
+			String mime = getMimeType(path);
+			System.out.println("mimetype : " + mime);
+			
+			
+			if (mime.equals("application/zip")) {
+				jsonObject = verifySignaturesInBdoc(path, false);
+				result = jsonObject.toString();
+				logger.info("/{"+idFile+"}: "+ result);
+				
+				return jsonObject;
+			}
+			// archivo si existe y es un pdf
+			else if (mime.equals("application/pdf")) {
+				path = SERVER_UPLOAD_LOCATION_FOLDER + idFile;
+				
+				jsonObject = verifySignaturesInPdf(path);
+				result = jsonObject.toString();
+				logger.info("/{"+idFile+"}: "+ result);
+				
+				return jsonObject;				
+			}
+			// el archivo existe pero es una extension no reconocida
+			else 
+			{
+				jsonObject.put("fileExist", "true");
+				jsonObject.put("error", "extension not supported");
+				return jsonObject;
+			}			
+		}	
+		// definitivamente el archivo no existe en el sistema de archivos
+		else
+		{
+			jsonObject.put("fileExist", "false");
+			logger.error("fileExist: false");
+			
+			return jsonObject;
+			 
+		}
+	}
+	
+	
+	
 	
 	
 	/**
@@ -1755,9 +1890,10 @@ public class MurachiRESTWS {
 	/**
 	 * Retorna un JSON con informacion de las firmas del documento BDOC
 	 * @param bdocFile archivo BDOC a verificar
+	 * @param serialized verdadero si el contenedor a verificar esta serializado
 	 * @return JSON con informacion de las firmas del documento BDOC
 	 */
-	private JSONObject verifySignaturesInBdoc(String bdocFile) {
+	private JSONObject verifySignaturesInBdoc(String bdocFile, Boolean serialized) {
 	
 		logger.debug("verifySignaturesInBdoc("+bdocFile+")");
 		System.out.println("verifySignaturesInBdoc(String bdocFile)");
@@ -1770,8 +1906,6 @@ public class MurachiRESTWS {
 		java.nio.file.Path path = Paths.get(bdocFile);
 		String idFile = path.getFileName().toString();
 		
-		
-		Security.addProvider(new BouncyCastleProvider());
 		Container container = null;
 		
 		Configuration configuration = new Configuration(Configuration.Mode.PROD);
@@ -1781,11 +1915,27 @@ public class MurachiRESTWS {
 		configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 		try
 		{
-			container = Container.open(bdocFile, configuration);
-			logger.debug("Container.open("+bdocFile+", DIGIDOC4J_CONFIGURATION)");
+			Security.addProvider(new BouncyCastleProvider());
+			if (!serialized) 
+			{
+				container = Container.open(bdocFile, configuration);
+				logger.debug("Container.open("+bdocFile+", DIGIDOC4J_CONFIGURATION)");	
+			}
+			else
+			{
+				container = deserialize(bdocFile);
+				logger.debug("container deserialized: " + bdocFile);
+			}
+						
 		} catch(DigiDoc4JException e) 
 		{
 			jsonSignatures.put("error", "File is not a valid BDOC container");
+			return jsonSignatures;
+		} catch (ClassNotFoundException e) {
+			jsonSignatures.put("error", "error al deserializar el contendor");
+			return jsonSignatures;
+		} catch (IOException e) {
+			jsonSignatures.put("error", "error al deserializar el contendor");
 			return jsonSignatures;
 		}
 		
@@ -1797,8 +1947,14 @@ public class MurachiRESTWS {
 		}else{
 			jsonSignatures.put("fileExist", "true");
 			System.out.println("fileExist: true");
+						
+			if (serialized){
+				jsonSignatures.put("fileId", idFile.split("-serialized.bin")[0]);
+			}
+			else {
+				jsonSignatures.put("fileId", idFile);
+			}
 			
-			jsonSignatures.put("fileId", idFile);
 			jsonSignatures.put("mimeType", "application/vnd.etsi.asic-e+zip");
 			
 			// informacion de archivos dentro del contenedor
