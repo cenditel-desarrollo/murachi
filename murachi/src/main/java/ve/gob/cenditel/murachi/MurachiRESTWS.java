@@ -3776,7 +3776,7 @@ public class MurachiRESTWS {
 	 * @throws IOException
 	 * @throws MurachiException
 	 * 
-	 * @api {post} /Murachi/0.1/archivos/firmados/bdocs/resenas Completa la firma de un contenedor BDOC.
+	 * @api {post} /Murachi/0.1/archivos/bdocs/firmas/post Completa la firma de un contenedor BDOC.
 	 * @apiName BdocFirmasPost
 	 * @apiGroup BDOCS
 	 * @apiVersion 0.1.0
