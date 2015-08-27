@@ -2681,6 +2681,7 @@ public class MurachiRESTWS {
 		logger.debug("	creado contenedor");
 		
 		Map<String, List<FormDataBodyPart>> fieldsByName = formParams.getFields();
+		logger.debug("	contenido de Map: " + Integer.toString(fieldsByName.size()));
 		
 		for (List<FormDataBodyPart> fields : fieldsByName.values())
 	    {
@@ -2691,13 +2692,15 @@ public class MurachiRESTWS {
 	            FormDataContentDisposition file = field.getFormDataContentDisposition();	            
 	            String fileName = file.getFileName();
 	            String mimeType = field.getMediaType().toString();
-	            System.out.println("fileName " + fileName);	            
-	            System.out.println("mime " + mimeType);
+	            logger.debug("fileName: " + fileName);	            
+	            logger.debug("mime: " + mimeType);
 
 	            addFileToBDOCContainer(is, fileName, mimeType, c);
 	            	           
 	        }
 	    }		
+		
+		logger.debug("cantidad de DataFile del contenedor: " + Integer.toString(c.getDataFiles().size()));
 		String fileId = UUID.randomUUID().toString();
 		System.out.println("id contenedor serializado: "+fileId);
 				
@@ -2716,11 +2719,14 @@ public class MurachiRESTWS {
 			result = "\"error\":\"no se pudo crear el contenedor; falló la serialización.\"";
 			return Response.status(500).entity(result).build();
 		}
-		result = "\"containerId\":\""+ fileId +"\"";
+		result = "{\"containerId\":\""+ fileId +"\"}";
+		logger.debug(result);
 		
 		
+		logger.debug("	{containerId:"+ fileId+"}");
 		return Response.status(200).entity(result).build();
 	}
+	
 	
 	/**
 	 * Recibe los archivos enviador a través del formulario, deserializa el contenedor identificado 
@@ -2845,7 +2851,7 @@ public class MurachiRESTWS {
 
 		logger.debug("	archivo(s) agregado correctamente a" + containerToOpen);
 		
-		result = "\"containerId\":\""+ containerId +"\"";		
+		result = "{\"containerId\":\""+ containerId +"\"}";		
 				
 		return Response.status(200).entity(result).build();
 	}
@@ -3847,6 +3853,9 @@ public class MurachiRESTWS {
 
 			
 			// deserializar el contenedor
+			
+			logger.debug("antes de deserializar el contenedor: " + fullPathContainerId);
+			
 			//container = deserialize(fullPathContainerId);
 			container = deserializer1(fullPathContainerId);
 			
