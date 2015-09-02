@@ -88,6 +88,7 @@ import ee.sk.digidoc.CertValue;
 import ee.sk.digidoc.DigiDocException;
 import ee.sk.digidoc.SignedDoc;
 import ee.sk.digidoc.factory.DigiDocGenFactory;
+import eu.europa.ec.markt.dss.exception.DSSException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -124,7 +125,9 @@ public class MurachiRESTWS {
 	private static final String API_VERSION = "0.1.0";
 	
 	// debe colocarse la barra al final de la ruta
-	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/murachi/";
+	//private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/murachi/";
+	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/var/lib/tomcat7/murachiWorkingDirectory/";
+	
 	
 	private static final String SHA256_MESSAGE_DIGEST = "SHA256";
 	
@@ -388,6 +391,7 @@ public class MurachiRESTWS {
 			
 				// deserializar el contenedor 
 				c = deserialize(SERVER_UPLOAD_LOCATION_FOLDER + fileName + "-serialized.bin");
+				
 				logger.debug("	deserializado contenedor: " + SERVER_UPLOAD_LOCATION_FOLDER + fileName + "-serialized.bin");
 				
 				logger.debug("numero de dataFile: "+ Integer.toString(c.getDataFiles().size()));
@@ -4112,6 +4116,14 @@ public class MurachiRESTWS {
 							
 			jsonError.put("error", e.getMessage());
 			return Response.status(500).entity(jsonError).build();				
+		} catch (DSSException e) {
+			JSONObject jsonError = new JSONObject();
+			
+			System.out.println("DSSException e: " + e.getMessage());
+			logger.error("error: " + e.getMessage());
+							
+			jsonError.put("error", e.getMessage());
+			return Response.status(500).entity(jsonError).build();
 		}
 				
 		// en este punto el archivo bdoc debe estar disponible en la ruta
