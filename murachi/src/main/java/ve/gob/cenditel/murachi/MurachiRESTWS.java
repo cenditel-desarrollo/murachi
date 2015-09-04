@@ -2693,13 +2693,44 @@ public class MurachiRESTWS {
 	        {
 	            InputStream is = field.getEntityAs(InputStream.class);
 	            
+	            if (is == null) 
+	            {
+	            	logger.debug("is: null");
+	            	result = "\"error\":\"archivo pasado al recurso es nulo.\"";
+	    			return Response.status(500).entity(result).build();
+	            }	           
+	            
 	            FormDataContentDisposition file = field.getFormDataContentDisposition();	            
 	            String fileName = file.getFileName();
-	            String mimeType = field.getMediaType().toString();
 	            logger.debug("fileName: " + fileName);	            
-	            logger.debug("mime: " + mimeType);
-
-	            addFileToBDOCContainer(is, fileName, mimeType, c);
+	            
+	            if (fileName == null)
+	            {
+	            	logger.debug("fileName: null");
+	            	result = "\"error\":\"nombre del archivo pasado al recurso es nulo. Debe especificar un nombre de archivo.\"";
+	    			return Response.status(500).entity(result).build();
+	            }	            
+	            
+	            String mimeType = field.getMediaType().toString();	            	            
+	            logger.debug("mimeType: " + mimeType);
+	            
+	            if (mimeType == null)
+	            {
+	            	logger.debug("mimeType: null");
+	            	result = "\"error\":\"tipo mime del archivo pasado al recurso es nulo.\"";
+	    			return Response.status(500).entity(result).build();
+	            }
+	            	            	            
+	            try
+	            {
+	            	addFileToBDOCContainer(is, fileName, mimeType, c);
+	            }
+	            catch(Exception e) 
+	            {
+	            	logger.debug("excepcion: " + e.getMessage());	            	
+	    			result = "\"error\":\"no se pudo insertar el archivo al contenedor.\"";
+	    			return Response.status(500).entity(result).build();
+	            }	            
 	            	           
 	        }
 	    }		
@@ -2815,6 +2846,7 @@ public class MurachiRESTWS {
 		    {
 		        for (FormDataBodyPart field : fields)
 		        {
+		        	/*
 		            InputStream is = field.getEntityAs(InputStream.class);
 		            
 		            FormDataContentDisposition file = field.getFormDataContentDisposition();	            
@@ -2823,7 +2855,49 @@ public class MurachiRESTWS {
 		            System.out.println("fileName " + fileName);	            
 		            System.out.println("mime " + mimeType);
 
-		            addFileToBDOCContainer(is, fileName, mimeType, c);	            	           
+		            addFileToBDOCContainer(is, fileName, mimeType, c);
+		            */	 
+		            
+		            InputStream is = field.getEntityAs(InputStream.class);
+		            
+		            if (is == null) 
+		            {
+		            	logger.debug("is: null");
+		            	result = "\"error\":\"archivo pasado al recurso es nulo.\"";
+		    			return Response.status(500).entity(result).build();
+		            }	           
+		            
+		            FormDataContentDisposition file = field.getFormDataContentDisposition();	            
+		            String fileName = file.getFileName();
+		            logger.debug("fileName: " + fileName);	            
+		            
+		            if (fileName == null)
+		            {
+		            	logger.debug("fileName: null");
+		            	result = "\"error\":\"nombre de archivo pasado al recurso es nulo. Debe especificar un nombre de archivo.\"";
+		    			return Response.status(500).entity(result).build();
+		            }	            
+		            
+		            String mimeType = field.getMediaType().toString();	            	            
+		            logger.debug("mimeType: " + mimeType);
+		            
+		            if (mimeType == null)
+		            {
+		            	logger.debug("mimeType: null");
+		            	result = "\"error\":\"tipo mime del archivo pasado al recurso es nulo.\"";
+		    			return Response.status(500).entity(result).build();
+		            }
+		            	            	            
+		            try
+		            {
+		            	addFileToBDOCContainer(is, fileName, mimeType, c);
+		            }
+		            catch(Exception e) 
+		            {
+		            	logger.debug("excepcion: " + e.getMessage());	            	
+		    			result = "\"error\":\"no se pudo insertar el archivo al contenedor.\"";
+		    			return Response.status(500).entity(result).build();
+		            }
 		        }
 		    }
 			// se debe serializar no guardar
