@@ -44,6 +44,7 @@ import java.text.SimpleDateFormat;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
+import javax.ws.rs.NameBinding;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -179,13 +180,14 @@ public class MurachiRESTWS {
 	 * @apiVersion 0.1.0
 	 * 
 	 * @apiExample Example usage:
-     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/version
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/version -H "Authorization: Basic YWRtaW46YWRtaW4="
 	 * 
 	 * @apiSuccess {String} murachiVersion Versión del API
 	 */
 	@Path("/version")
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response returnVersion() {
 		logger.info("/version: Murachi Version: " + API_VERSION);	
 		JSONObject jsonObject = new JSONObject();
@@ -223,6 +225,7 @@ public class MurachiRESTWS {
      *           cache: false,
      *           contentType: false,
 	 *           processData: false,
+	 *           headers: {"Authorization":"Basic YWRtaW46YWRtaW4="},
      *           success: function(response) {
      *                  //identificador del archivo en el servidor
 	 *                  var fileId = response.fileId.toString();
@@ -238,6 +241,10 @@ public class MurachiRESTWS {
 	 *     {
 	 *       "error": "datos recibidos del formulario son nulos"
 	 *     }
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
 	 *     
 	 *     HTTP/1.1 500 
 	 *     {
@@ -251,6 +258,7 @@ public class MurachiRESTWS {
 	@Path("/")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response uploadFile(
 			@FormDataParam("upload") InputStream uploadedInputStream,
 			@FormDataParam("upload") FormDataContentDisposition fileDetails) throws MurachiException {
@@ -533,6 +541,7 @@ public class MurachiRESTWS {
      *           cache: false,
      *           contentType: false,
 	 *           processData: false,
+	 *           headers: {"Authorization":"Basic YWRtaW46YWRtaW4="},
      *           success: function(response) {
 	 *                  var json = JSON.stringify(response);
 	 *                  alert(json);
@@ -550,6 +559,10 @@ public class MurachiRESTWS {
 	 *       "error": "datos recibidos del formulario son nulos"
 	 *     }
 	 *     
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }     
 	 *     
 	 *     HTTP/1.1 500 
 	 *     {
@@ -561,6 +574,7 @@ public class MurachiRESTWS {
 	@Path("/firmados")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response uploadFileAndVerify(
 			@FormDataParam("upload") InputStream uploadedInputStream,
 			@FormDataParam("upload") FormDataContentDisposition fileDetails) throws MurachiException {
@@ -713,9 +727,14 @@ public class MurachiRESTWS {
 	 *  
 	 * 
 	 * @apiExample Example usage:
-     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee -H "Authorization: Basic YWRtaW46YWRtaW4="
 	 * 
 	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
+	 *     
 	 *     HTTP/1.1 404 Bad Request
 	 *     {
 	 *       "fileExist": "false"
@@ -779,6 +798,7 @@ public class MurachiRESTWS {
 	@GET
 	@Path("/{idFile}")
 	@Produces("application/json")
+	@Authenticator
 	public Response verifyAFile(@PathParam("idFile") String idFile) throws MurachiException {
 		
 		JSONObject jsonObject = new JSONObject();
@@ -1363,6 +1383,7 @@ public class MurachiRESTWS {
      *           dataType: "json",
      *           data: parameters,
      *           contentType: "application/json",
+     *           headers: {"Authorization":"Basic YWRtaW46YWRtaW4="},
      *           success: function(data, textStatus, jqXHR){
 	 *                              var json_x = data;
      *                              var hash = json_x['hash']; 
@@ -1385,6 +1406,11 @@ public class MurachiRESTWS {
 	 *       "error": "El archivo que desea firmar no es un PDF."
 	 *     }
 	 *     
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
+	 *     
 	 *     HTTP/1.1 500 Internal Server Error
 	 *     {
 	 *       "hash": "",
@@ -1397,6 +1423,7 @@ public class MurachiRESTWS {
 	@Path("/pdfs")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	//public PresignHash presignPdf(PresignParameters presignPar, @Context HttpServletRequest req) {
 	public Response presignPdf(PresignParameters presignPar, @Context HttpServletRequest req) throws MurachiException {
 		
@@ -1712,6 +1739,7 @@ public class MurachiRESTWS {
      *           dataType: "json",
      *           data: JSON.stringify({"signature":signature.hex}),
      *           contentType: "application/json",
+     *           headers: {"Authorization":"Basic YWRtaW46YWRtaW4="},
      *           success: function(data, textStatus, jqXHR){
      *                              alert('Archivo firmado correctamente: ' + data['signedFileId']);
      *           },
@@ -1723,6 +1751,11 @@ public class MurachiRESTWS {
 	 * 
 	 * 
 	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     } 
+	 * 
 	 *     HTTP/1.1 500 Internal Server Error
 	 *     {
 	 *       "error": "El archivo que desea firmar no es un PDF."
@@ -1732,7 +1765,8 @@ public class MurachiRESTWS {
 	@POST
 	@Path("/pdfs/resenas")
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)	
+	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response postsignPdf(PostsignParameters postsignPar, @Context HttpServletRequest req) throws IOException, MurachiException {
 		
 		logger.info("/pdfs/resenas");
@@ -1866,6 +1900,7 @@ public class MurachiRESTWS {
 	 */
 	@GET
 	@Path("/pdfs/{idFile}")
+	@Authenticator
 	public Response getPdfSigned(@PathParam("idFile") String idFile) {
 		logger.info("/pdfs/{idFile}");
 		File file = null;
@@ -2351,6 +2386,7 @@ public class MurachiRESTWS {
      *           dataType: "json",
      *           data: parameters,
      *           contentType: "application/json",
+     *           headers: {"Authorization":"Basic YWRtaW46YWRtaW4="},
      *           success: function(data, textStatus, jqXHR){
 	 *                              var json_x = data;
      *                              var hash = json_x['hash']; 
@@ -2367,6 +2403,11 @@ public class MurachiRESTWS {
 	 * 
 	 * 
 	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
+	 *     
 	 *     HTTP/1.1 500 Internal Server Error
 	 *     {
 	 *       "hash": "",
@@ -2379,6 +2420,7 @@ public class MurachiRESTWS {
 	@Path("/bdocs")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response presignBdoc(PresignParametersBdoc presignPar, @Context HttpServletRequest req) throws MurachiException {
 		
 		logger.info("/bdocs");
@@ -2551,6 +2593,7 @@ public class MurachiRESTWS {
      *           dataType: "json",
      *           data: JSON.stringify({"signature":signature.hex}),
      *           contentType: "application/json",
+     *           headers: {"Authorization":"Basic YWRtaW46YWRtaW4="},
      *           success: function(data, textStatus, jqXHR){
      *                              alert('Archivo firmado correctamente: ' + data['signedFileId']);
      *           },
@@ -2562,6 +2605,11 @@ public class MurachiRESTWS {
 	 * 
 	 * 
 	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
+	 *     
 	 *     HTTP/1.1 500 Internal Server Error
 	 *     {
 	 *       "error": "Error en proceso de deserialización y completación de firma"
@@ -2571,7 +2619,8 @@ public class MurachiRESTWS {
 	@POST
 	@Path("/bdocs/resenas")
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)	
+	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response postsignBdoc(PostsignParameters postsignPar, @Context HttpServletRequest req) throws IOException, MurachiException {
 		
 		logger.info("/bdocs/resenas");
@@ -2659,7 +2708,38 @@ public class MurachiRESTWS {
 	 * 
 	 * @apiSuccess {String} containerId Identificador único del contenedor BDOC creado.
 	 * 
+	 * @apiExample Example usage:
+	 * 
+	 * var formData = new FormData();
+     * var fileInput = document.getElementById("file-sign");
+     * var list = fileInput.files;
+     * for (var i=0; i<list.length; i++){
+	 *    formData.append("upload", $("#file-sign")[0].files[i]);
+	 * }
+	 * 
+	 * $.ajax({
+     *          url: "https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/cargas",
+     *          type: "post",
+     *          dataType: "json",
+     *          data: formData,
+     *          cache: false,
+     *          contentType: false,
+	 *          processData: false,
+	 *          headers: {"Authorization":"Basic YWRtaW46YWRtaW4="},
+	 *          success: function(response) {
+	 *             var fileId = response.containerId.toString();
+	 *          },
+	 *          error: function(jqXHR, textStatus, errorThrown){
+	 *             alert('ajax error function: ' + jqXHR.responseText);                             
+	 *          }
+     *  });
+     *  
 	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
+	 * 
 	 *     HTTP/1.1 500 Internal Server Error
 	 *     {
 	 *       "error": "no se pudo crear el contenedor; falló la serialización."
@@ -2670,6 +2750,7 @@ public class MurachiRESTWS {
 	@Path("/bdocs/cargas")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response uploadFilesToBDOC(FormDataMultiPart formParams) throws MurachiException {
 		
 		logger.info("recurso /bdocs/cargas");
@@ -2785,6 +2866,11 @@ public class MurachiRESTWS {
 	 * @apiSuccess {String} containerId Identificador único del contenedor BDOC.
 	 * 
 	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
+	 *     
 	 *     HTTP/1.1 500 Internal Server Error
 	 *     {
 	 *       "error": "no se pudo agregar el archivo al contenedor."
@@ -2795,6 +2881,7 @@ public class MurachiRESTWS {
 	@Path("/bdocs/cargas/{containerId}")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response appendFilesToBDOC(FormDataMultiPart formParams, @PathParam("containerId")  String containerId) throws MurachiException {
 		
 		logger.info("recurso /bdocs/cargas/"+containerId);
@@ -2952,24 +3039,37 @@ public class MurachiRESTWS {
 	 * 
 	 * @apiSuccess {String} dataFileNumber Número de archivos que se encuentran en el contendor BDOC.
 	 * 
+	 * @apiExample Example usage:
+	 * 
+	 * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee -k -H "Authorization: Basic YWRtaW46YWRtaW4="
+	 * 
+	 * 
 	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
+	 *     
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "error": "el contenedor con identificador containerId no existe ."
+	 *     }
+	 *
 	 *     HTTP/1.1 500 Internal Server Error
 	 *     {
 	 *       "error": "error interno al leer el contenedor."
 	 *     }
+	 *     
 	 *     HTTP/1.1 500 Internal Server Error
 	 *     {
 	 *       "error": "no se pudo leer el contenedor."
-	 *     }
-	 *     HTTP/1.1 404 Not Found
-	 *     {
-	 *       "error": "el contenedor con identificador containerId no existe ."
 	 *     }
 	 * 
 	 */
 	@GET
 	@Path("/bdocs/archivos/{containerId}")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response getDataFileNumber(@PathParam("containerId")  String containerId) {
 		logger.info("recurso /bdocs/archivos/"+containerId);
 								
@@ -3050,10 +3150,15 @@ public class MurachiRESTWS {
 	 * 	 
 	 * 
 	 * @apiExample Example usage:
-     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee/0
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee/0 -H "Authorization: Basic YWRtaW46YWRtaW4="
 	 * 	 
 	 * 
 	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
+     *
 	 *     HTTP/1.1 404 Not Found
 	 *     {
 	 *       "fileExist": false
@@ -3071,6 +3176,7 @@ public class MurachiRESTWS {
 	@GET
 	@Path("/bdocs/archivos/{containerId}/{dataFileId}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	@Authenticator
 	public Response downloadDataFileFromBDOC(@PathParam("containerId")  String containerId, @PathParam("dataFileId")  int dataFileId) {
 		logger.info("recurso /bdocs/archivos/"+containerId+"/"+Integer.toString(dataFileId));
 		
@@ -3163,14 +3269,20 @@ public class MurachiRESTWS {
 	 * @apiSuccess {String} mensaje archivo eliminado correctamente
 	 * 
 	 * @apiExample Example usage:
-     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/papelera/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee/0
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/papelera/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee/0 -H "Authorization: Basic YWRtaW46YWRtaW4="
 	 * 	 
 	 * 
 	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
+	 *     
 	 *     HTTP/1.1 404 Not Found
 	 *     {
 	 *       "fileExist": false
 	 *     }
+	 *     
 	 *     HTTP/1.1 500 Internal server Error
 	 *     {
 	 *       "error": "no se pudo leer el contenido del contenedor."
@@ -3180,6 +3292,7 @@ public class MurachiRESTWS {
 	@GET
 	@Path("/bdocs/archivos/papelera/{containerId}/{dataFileId}")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response removeDataFile(@PathParam("containerId")  String containerId, @PathParam("dataFileId") int dataFileId) {
 		logger.info("recurso /bdocs/archivos/papelera/"+containerId+"/"+Integer.toString(dataFileId));
 		
@@ -3290,18 +3403,25 @@ public class MurachiRESTWS {
 	 * @apiSuccess {String} dataFiles lista de archivos que se encuentran en el contenedor.
 	 * 
 	 * @apiExample Example usage:
-     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/lista/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/archivos/lista/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee -H "Authorization: Basic YWRtaW46YWRtaW4=" 
 	 * 	 
 	 * 
 	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
+	 *     
 	 *     HTTP/1.1 404 Not Found
 	 *     {
 	 *       "error": "El contenedor con identificador containerId no existe."
 	 *     }
+	 *     
 	 *     HTTP/1.1 500 Internal server Error
 	 *     {
 	 *       "error": "no se pudo leer el contenido del contenedor."
 	 *     }
+     *     
      *     HTTP/1.1 500 Internal server Error
 	 *     {
 	 *       "error": "El contenedor tiene un número menor que cero de archivos."
@@ -3311,6 +3431,7 @@ public class MurachiRESTWS {
 	@GET
 	@Path("/bdocs/archivos/lista/{containerId}")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response getDataFileList(@PathParam("containerId")  String containerId) {
 	
 		
@@ -3411,21 +3532,32 @@ public class MurachiRESTWS {
 	 * 
 	 * @apiDescription Retorna el número de firmas del contendor BDOC.
 	 * 
+	 * @apiExample Example usage:
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/firmas/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee -H "Authorization: Basic YWRtaW46YWRtaW4="
+	 * 
 	 * @apiSuccess {String} signatureNumber Número de firmas del contendor BDOC.
 	 * 
 	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
+	 *     
+	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "error": "el contenedor con identificador containerId no existe ."
+	 *     }
+	 *     
 	 *     HTTP/1.1 500 Internal Server Error
 	 *     {
 	 *       "error": "error interno al leer el contenedor."
 	 *     }
-	 *     HTTP/1.1 404 Not Found
-	 *     {
-	 *       "error": "el contenedor con identificador containerId no existe ."
-	 *     } 
+	  
 	 */
 	@GET
 	@Path("/bdocs/firmas/{containerId}")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response getSignatureNumber(@PathParam("containerId")  String containerId) {
 		logger.info("/bdocs/firmas/"+containerId);
 								
@@ -3487,7 +3619,7 @@ public class MurachiRESTWS {
 	 * 
 	 * @return identificador del contenedor.
 	 * 
-	 * * @api {get} /Murachi/0.1/archivos/bdocs/firmas/papelera{containerId}/{signatureId} Elimina una firma de un contenedor.
+	 * * @api {get} /Murachi/0.1/archivos/bdocs/firmas/papelera/{containerId}/{signatureId} Elimina una firma de un contenedor.
 	 * @apiName BDocEliminaFirmas
 	 * @apiGroup BDOCS
 	 * @apiVersion 0.1.0
@@ -3496,23 +3628,33 @@ public class MurachiRESTWS {
 	 * @apiParam {Number} signatureId identificador de firma a eliminar.
 	 * 
 	 * @apiDescription Elimina una firma del contendor BDOC.
-	 * 
+     *
+	 * @apiExample Example usage:
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/firmas/papelera/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee -H "Authorization: Basic YWRtaW46YWRtaW4="
+     * 
 	 * @apiSuccess {String} mensaje firma eliminada correctamente
 	 * 
 	 * @apiErrorExample {json} Error-Response:
-	 *     HTTP/1.1 500 Internal Server Error
+	 *     HTTP/1.1 401 Unauthorized
 	 *     {
-	 *       "error": "no se pudo leer el contenido del contenedor."
+	 *       "error": "acceso no autorizado"
 	 *     }
+	 *     
 	 *     HTTP/1.1 404 Not Found
 	 *     {
 	 *       "error": "el contenedor con identificador containerId no existe ."
 	 *     } 
+	 *     
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "no se pudo leer el contenido del contenedor."
+	 *     }
 	 * 
 	 */
 	@GET
 	@Path("/bdocs/firmas/papelera/{containerId}/{signatureId}")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response removeSignature(@PathParam("containerId")  String containerId, @PathParam("signatureId") int signatureId) {
 		logger.info("recurso /bdocs/firmas/papelera/"+containerId+"/"+Integer.toString(signatureId));
 		
@@ -3631,28 +3773,38 @@ public class MurachiRESTWS {
 	 * @apiSuccess {String} signatures.isValid Firma electrónica válida.
 	 * @apiSuccess {String} signatures.signerCertificateIssuer Emisor del certificado firmante. 
 	 * @apiSuccess {String} signatures.signatureCountry País donde se realiza la firma.
+	 * 
+     * @apiExample Example usage:
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/bdocs/firmas/lista/f011ff87-f0d0-4a5e-a0b9-a64eb70661ee -H "Authorization: Basic YWRtaW46YWRtaW4="
 	 *
 	 * @apiSuccess {Boolean}   containerValidation: Especifica si el contenedor posee una estructura válida.  
-
 	 * 
 	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 401 Unauthorized
+	 *     {
+	 *       "error": "acceso no autorizado"
+	 *     }
+	 *     
+ 	 *     HTTP/1.1 404 Not Found
+	 *     {
+	 *       "error": "el contenedor con identificador containerId no existe ."
+	 *     } 
+	 *     
 	 *     HTTP/1.1 500 Internal Server Error
 	 *     {
 	 *       "error": "error interno al leer el contenedor."
 	 *     }
+	 *     
 	 *     HTTP/1.1 500 Internal Server Error
 	 *     {
 	 *       "error": "El contenedor tiene un número menor que cero de firmas"
 	 *     }
-
-	 *     HTTP/1.1 404 Not Found
-	 *     {
-	 *       "error": "el contenedor con identificador containerId no existe ."
-	 *     } 
+	 *     
 	 */
 	@GET
 	@Path("/bdocs/firmas/lista/{containerId}")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response getSignaturesList(@PathParam("containerId")  String containerId) {
 		logger.info("/bdocs/firmas/lista/"+containerId);
 								
@@ -3775,6 +3927,7 @@ public class MurachiRESTWS {
      *           dataType: "json",
      *           data: parameters,
      *           contentType: "application/json",
+     *           headers: {"Authorization":"Basic YWRtaW46YWRtaW4="},
      *           success: function(data, textStatus, jqXHR){
 	 *                              var json_x = data;
      *                              var hash = json_x['hash']; 
@@ -3791,22 +3944,28 @@ public class MurachiRESTWS {
 	 * 
 	 * 
 	 * @apiErrorExample {json} Error-Response:
-	 *     HTTP/1.1 500 Internal Server Error
+	 *     HTTP/1.1 401 Unauthorized
 	 *     {
-	 *       "hash": "",
-	 *       "error": "Error en el certificado del firmante"
+	 *       "error": "acceso no autorizado"
 	 *     }
+	 *     
 	 *     HTTP/1.1 404 Not Found
 	 *     {
 	 *       "error": "el contenedor con identificador containerId no existe ."
 	 *     }
-	 * 
+	 *     
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "hash": "",
+	 *       "error": "Error en el certificado del firmante"
+	 *     } 
 	 * 
 	 */
 	@POST
 	@Path("/bdocs/firmas/pre")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
 	public Response presignBDOCContainer(PresignParametersBdoc presignPar) throws MurachiException {
 		
 		logger.info("recurso /bdocs/firmas/pre");
@@ -4039,6 +4198,7 @@ public class MurachiRESTWS {
      *           	"containerId":"351d6f62-4653-48d8-8a41-6145b53f3921"
      *           	}),
      *           contentType: "application/json",
+     *           headers: {"Authorization":"Basic YWRtaW46YWRtaW4="},
      *           success: function(data, textStatus, jqXHR){
      *                              alert('Archivo firmado correctamente: ' + data['signedFileId']);
      *           },
@@ -4050,20 +4210,28 @@ public class MurachiRESTWS {
 	 * 
 	 * 
 	 * @apiErrorExample {json} Error-Response:
-	 *     HTTP/1.1 500 Internal Server Error
+	 *     HTTP/1.1 401 Unauthorized
 	 *     {
-	 *       "error": "Error en proceso de deserialización y completación de firma"
+	 *       "error": "acceso no autorizado"
 	 *     }
+	 *     
 	 *     HTTP/1.1 404 Not Found
 	 *     {
 	 *       "error": "el contenedor con identificador containerId no existe ."
 	 *     }
+	 *          
+	 *     HTTP/1.1 500 Internal Server Error
+	 *     {
+	 *       "error": "Error en proceso de deserialización y completación de firma"
+	 *     }
+
 	 * 
 	 */
 	@POST
 	@Path("/bdocs/firmas/post")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)	
+	@Authenticator
 	public Response postsignBDOCContainer(PostsignParameters postsignPar) throws IOException, MurachiException {
 		
 		logger.info("recurso /bdocs/firmas/post");
