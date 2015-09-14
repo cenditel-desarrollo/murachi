@@ -1431,20 +1431,72 @@ public class MurachiRESTWS {
 		
 		PresignHash presignHash = new PresignHash();
 
+		String result = "";
+		if (presignPar == null) {
+			logger.error("solicitud mal formada.");
+			result = "\"error\":\"solicitud mal formada\"";
+			return Response.status(400).entity(result).build();	
+		}
+				
 		// obtener el id del archivo 
 		String fileId = presignPar.getFileId();
+		if (fileId == null) {
+			logger.debug("fileId == null");
+			logger.error("solicitud mal formada: no esta especificado el identificador del archivo PDF.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el identificador del archivo PDF\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	fileId: " + fileId);
 		
 		// cadena con el certificado
 		String certHex = presignPar.getCertificate();
-		System.out.println("certificado en Hex: " + certHex);
+		if (certHex == null) {
+			logger.debug("certHex == null");
+			logger.error("solicitud mal formada: no esta especificado el certificado del firmante en hexadecimal.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el certificado del firmante en hexadecimal.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	certHex: " + certHex);
 
+		// razon de la firma
 		String reason = presignPar.getReason();
+		if (reason == null) {
+			logger.debug("certHex == null");
+			logger.error("solicitud mal formada: no esta especificada la razon de la firma.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificada la razon de la firma.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	reason: " + reason);
 		
+		// ubicacion de la firma
 		String location = presignPar.getLocation();
+		if (location == null) {
+			logger.debug("location == null");
+			logger.error("solicitud mal formada: no esta especificada la ubicación donde se realiza la firma.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificada la ubicación donde se realiza la firma.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	location: " + location);
 		
+		// contacto del firmante
 		String contact = presignPar.getContact();
+		if (contact == null) {
+			logger.debug("contact == null");
+			logger.error("solicitud mal formada: no esta especificada la informacion de contacto del firmante.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificada la informacion de contacto del firmante.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	location: " + location);
 		
+		// firma visible
 		Boolean signatureVisible = presignPar.getSignatureVisible(); 
+		if (signatureVisible == null) {
+			logger.debug("signatureVisible == null");
+			logger.error("solicitud mal formada: no esta especificado si la firma PDF es visible o no.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado si la firma PDF es visible o no.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	signatureVisible: " + Boolean.toString(signatureVisible));
 		
 		
 		String pdf = SERVER_UPLOAD_LOCATION_FOLDER + fileId;
@@ -1460,11 +1512,9 @@ public class MurachiRESTWS {
 									
 			//result = presignHash.toString();
 			logger.info("El archivo que desea firmar no es un PDF.");
-			return Response.status(400).entity(presignHash).build();
-			
+			return Response.status(400).entity(presignHash).build();			
 		}
-			
-				
+							
 		try {
 			CertificateFactory factory = CertificateFactory.getInstance("X.509");
 			Certificate[] chain = new Certificate[1];
@@ -1770,9 +1820,24 @@ public class MurachiRESTWS {
 	public Response postsignPdf(PostsignParameters postsignPar, @Context HttpServletRequest req) throws IOException, MurachiException {
 		
 		logger.info("/pdfs/resenas");
+		
+		String result = "";
+
+		if (postsignPar == null) {
+			logger.error("solicitud mal formada.");
+			result = "\"error\":\"solicitud mal formada\"";
+			return Response.status(400).entity(result).build();	
+		}
+		
 		// cadena con la firma
 		String signature = postsignPar.getSignature();
-		System.out.println("firma en Hex: " + signature);
+		if (signature == null) {
+			logger.debug("signature == null");
+			logger.error("solicitud mal formada: no esta especificada la firma realizada en el cliente.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el identificador del archivo PDF\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	signature: " + signature);
 		
 		HttpSession session = req.getSession(false);
 		
@@ -1793,6 +1858,24 @@ public class MurachiRESTWS {
 		ByteArrayOutputStream os = (ByteArrayOutputStream) session.getAttribute("baos");
 		
 		JSONObject jsonError = new JSONObject();
+		
+		if (fileId == null) {
+			System.out.println("fileId == null");
+			logger.error("Error en completacion de firma: identificador de archivo nulo");
+			//throw new MurachiException("Error en completacion de firma: estructura PdfPKCS7 nula");
+			
+			jsonError.put("error", "identificador de archivo nulo");
+			return Response.status(500).entity(jsonError).build();			
+		}
+		
+		if (stamper == null) {
+			System.out.println("stamper == null");
+			logger.error("Error en completacion de firma: estructura PdfStamper nula");
+			//throw new MurachiException("Error en completacion de firma: estructura PdfPKCS7 nula");
+			
+			jsonError.put("error", "estructura PdfStamper nula");
+			return Response.status(500).entity(jsonError).build();			
+		}
 		
 		if (sgn == null) {
 			System.out.println("sgn == null");
@@ -2759,8 +2842,12 @@ public class MurachiRESTWS {
 		// cadena con la respuesta
 		String result = "";
 		
-		System.out.println("uploadFilesToBDOC...");
-
+		if (formParams == null) {
+			logger.error("solicitud mal formada.");
+			result = "\"error\":\"solicitud mal formada\"";
+			return Response.status(400).entity(result).build();
+		}
+		
 		Security.addProvider(new BouncyCastleProvider());		
 		Container c = createBDOCContainer();
 		logger.debug("	creado contenedor");
@@ -2889,10 +2976,21 @@ public class MurachiRESTWS {
 		
 		// cadena con la respuesta
 		String result = "";
+		
 		// ruta del contenedor serializado
 		String serializedContainerId = "";
-				
-		System.out.println("appendFilesToBDOC...");
+						
+		if (formParams == null) {
+			logger.error("solicitud mal formada.");
+			result = "\"error\":\"solicitud mal formada\"";
+			return Response.status(400).entity(result).build();
+		}
+		
+		if (containerId == null) {
+			logger.error("solicitud mal formada.");
+			result = "\"error\":\"solicitud mal formada no se especifico el identificador del contenedor.\"";
+			return Response.status(400).entity(result).build();
+		}
 		
 		System.out.println("containerId: "+ containerId);
 
@@ -3968,30 +4066,82 @@ public class MurachiRESTWS {
 	@Authenticator
 	public Response presignBDOCContainer(PresignParametersBdoc presignPar) throws MurachiException {
 		
+		String result = "";
+		
 		logger.info("recurso /bdocs/firmas/pre");
 		
 		PresignHash presignHash = new PresignHash();
-
-		// obtener el id del archivo a firmar
-		String containerId = presignPar.getFileId();
+		logger.debug("presignPar: " + presignPar);
 		
+		if (presignPar == null) {
+			logger.error("solicitud mal formada.");
+			result = "\"error\":\"solicitud mal formada\"";
+			return Response.status(400).entity(result).build();	
+		}
+				
+		// obtener el id del archivo a firmar
+		String containerId = presignPar.getFileId();		
+		if (containerId == null) {
+			logger.debug("containerId == null");
+			logger.error("solicitud mal formada: no esta especificado el identificador del contenedor.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el identificador del contenedor\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	containerId: " + containerId);
+				
 		// cadena con el certificado
-		String certHex = presignPar.getCertificate();
-		System.out.println("certificado en Hex: " + certHex);
+		String certHex = presignPar.getCertificate();		
+		if (certHex == null) {
+			logger.debug("certHex == null");
+			logger.error("solicitud mal formada: no esta especificado el certificado firmante en hexadecimal.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el certificado firmante en hexadecimal\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	certHex: " + certHex);
 
 		String city = presignPar.getCity();
+		if (city == null) {
+			logger.debug("city == null");
+			logger.error("solicitud mal formada: no esta especificada la ciudad donde se realiza la firma.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificada la ciudad donde se realiza la firma\"";
+			return Response.status(400).entity(result).build();
+		}		
 		logger.debug("	city: " + city);
 		
 		String state = presignPar.getState();
+		if (state == null) {
+			logger.debug("state == null");
+			logger.error("solicitud mal formada: no esta especificado el estado donde se realiza la firma.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el estado donde se realiza la firma\"";
+			return Response.status(400).entity(result).build();
+		}
 		logger.debug("	state: " + state);
 		
 		String postalCode = presignPar.getPostalCode();
+		if (postalCode == null) {
+			logger.debug("state == null");
+			logger.error("solicitud mal formada: no esta especificado el codigo postal donde se realiza la firma.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el codigo postal donde se realiza la firma\"";
+			return Response.status(400).entity(result).build();
+		}
 		logger.debug("	postalCode: " + postalCode);
 		
 		String country = presignPar.getCountry();
+		if (country == null) {
+			logger.debug("country == null");
+			logger.error("solicitud mal formada: no esta especificado el pais donde se realiza la firma.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el pais donde se realiza la firma\"";
+			return Response.status(400).entity(result).build();
+		}
 		logger.debug("	country: " + country);
 		
 		String role = presignPar.getRole();
+		if (role == null) {
+			logger.debug("role == null");
+			logger.error("solicitud mal formada: no esta especificado el rol del firmante.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el el rol del firmante\"";
+			return Response.status(400).entity(result).build();
+		}
 		logger.debug("	role: " + role);
 		
 		//Boolean addSignature = presignPar.getAddSignature();
@@ -4002,8 +4152,6 @@ public class MurachiRESTWS {
 		
 		// 
 		String hashToSign = "";
-		
-		String result = "";
 		
 		SignedInfo signedInfo;
 		
@@ -4235,14 +4383,32 @@ public class MurachiRESTWS {
 	public Response postsignBDOCContainer(PostsignParameters postsignPar) throws IOException, MurachiException {
 		
 		logger.info("recurso /bdocs/firmas/post");
-
+		String result = "";
+		
+		if (postsignPar == null) {
+			logger.error("solicitud mal formada.");
+			result = "\"error\":\"solicitud mal formada\"";
+			return Response.status(400).entity(result).build();	
+		}
+		
 		// cadena con la firma
 		String signature = postsignPar.getSignature();
-		System.out.println("firma en Hex: " + signature);
+		if (signature == null) {
+			logger.debug("signature == null");
+			logger.error("solicitud mal formada: no esta especificada la firma realizada en el cliente.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificada la firma realizada en el cliente\"";
+			return Response.status(400).entity(result).build();
+		}
 		logger.info("firma en Hex: " + signature);
 		
 		// obtener el id del archivo a firmar
 		String containerId = postsignPar.getContainerId();
+		if (containerId == null) {
+			logger.debug("containerId == null");
+			logger.error("solicitud mal formada: no esta especificado el identificador del contenedor.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el identificador del contenedor\"";
+			return Response.status(400).entity(result).build();
+		}
 				
 		String signedBdoc = containerId + ".bdoc";
 		logger.debug("	sigendBdoc: " + signedBdoc);
@@ -4256,7 +4422,7 @@ public class MurachiRESTWS {
 		
 		if (!f.exists()) {
 			logger.error("el contenedor "+ serializedContainerId + " no existe.");
-			String result = "\"error\":\"el contenedor "+ serializedContainerId + " no existe\"";
+			result = "\"error\":\"el contenedor "+ serializedContainerId + " no existe\"";
 			return Response.status(404).entity(result).build();	
 		}
 		
