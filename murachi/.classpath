@@ -61,5 +61,6 @@
 	<classpathentry kind="lib" path="/home/aaraujo/desarrollo/2015/servicioVerificacion/src/murachi/murachi/WebContent/WEB-INF/lib/snakeyaml.jar"/>
 	<classpathentry kind="lib" path="/home/aaraujo/desarrollo/2015/servicioVerificacion/src/murachi/murachi/WebContent/WEB-INF/lib/xalan.jar"/>
 	<classpathentry kind="lib" path="/home/aaraujo/desarrollo/2015/servicioVerificacion/src/murachi/murachi/WebContent/WEB-INF/lib/xmlsec.jar"/>
+	<classpathentry kind="lib" path="/home/aaraujo/desarrollo/2015/servicioVerificacion/src/murachi/murachi/WebContent/WEB-INF/lib/postgresql-9.4-1202.jdbc4.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

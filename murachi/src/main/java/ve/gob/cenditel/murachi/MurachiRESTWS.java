@@ -44,7 +44,6 @@ import java.text.SimpleDateFormat;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
-import javax.ws.rs.NameBinding;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -118,6 +117,7 @@ import ve.gob.cenditel.murachi.MurachiException;
 import org.apache.log4j.Logger;
 import org.apache.tika.Tika;
 
+
 @Path("/archivos")
 public class MurachiRESTWS {
 	
@@ -128,8 +128,7 @@ public class MurachiRESTWS {
 	// debe colocarse la barra al final de la ruta
 	//private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/murachi/";
 	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/var/lib/tomcat7/murachiWorkingDirectory/";
-	
-	
+		
 	private static final String SHA256_MESSAGE_DIGEST = "SHA256";
 	
 	private static final String RSA_DIGEST_ENCRYPTION_ALGORITHM = "RSA";
@@ -138,7 +137,16 @@ public class MurachiRESTWS {
 	
 	private final String DIGIDOC4J_TSL_LOCATION = "file://" + getAbsolutePathOfResource("venezuela-tsl.xml");
 	
-
+	private final String databaseHost = "localhost";
+	
+	private final String databasePort = "5432";
+	
+	private final String databaseName = "databasemurachi";
+	
+	private final String databaseLogin = "aaraujo";
+	
+	private final String databasePassword = "aaraujo";
+	
 
 	// para reportes de advertencias de BDOC
 	private static boolean bdocWarnings = true;
@@ -4973,6 +4981,54 @@ public class MurachiRESTWS {
 		  }
 	  }
 	  
+
+	  /**
+	   * Retorna un JSON con estadisticas de uso del servicio.
+	   * 
+	   * @return JSON con estadisticas de uso del servicio.
+	   */
+	  @GET
+	  @Path("/estadisticas")
+	  @Produces(MediaType.APPLICATION_JSON)	
+	  public Response getStatisctics()  {
+		  
+		  logger.info("/estadisticas ");
+		  String result = "";
+		  
+		  MURACHIStatistic statistic = new MURACHIStatistic(databaseHost, databasePort, databaseName, databaseLogin, databasePassword);
+		  
+		  /*
+		  try {
+			statistic.createDatabaseTables();
+		  } catch (InstantiationException | IllegalAccessException e) {
+			  logger.error("error al crear la base de datos de estadisticas: " + e.getMessage());			
+			  result = "\"error\":\"no se pudo crear la base de datos de estadisticas del servicio.\"";
+			  return Response.status(500).entity(result).build();
+		  }
+		  */
+		  
+		  
+		  //statistic.incrementSignatures(0);
+		  
+		  int countSignatures = statistic.countOfSigantures();
+		  logger.debug("fimas realizadas correctamente: "+ Integer.toString(countSignatures));
+		  
+		  JSONObject jsonObject = new JSONObject();
+		  jsonObject.put("numeroDeFirmasEjecutadas", Integer.toString(countSignatures));
+		  
+		  int countSignaturesError = statistic.countOfSiganturesFailed();
+		  jsonObject.put("numeroDeFimasIncompletas", Integer.toString(countSignaturesError));
+		  
+		  int countVerifications = statistic.countOfVerifications();
+		  jsonObject.put("numeroDeVerificaciones", Integer.toString(countVerifications));
+		  
+		  result = jsonObject.toString();
+		  
+		  return Response.status(200).entity(result).build();
+	  }
+	  
+	  
+	
 	  
 	// ************************************************************************
 	// ************************************************************************
