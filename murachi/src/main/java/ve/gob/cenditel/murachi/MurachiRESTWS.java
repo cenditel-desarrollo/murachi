@@ -1981,6 +1981,11 @@ public class MurachiRESTWS {
 		jsonFinalResult.put("signedFileId",fileId + "-signed.pdf");
 		
 		logger.info(jsonFinalResult.toString());
+		
+		// registrar la firma exitosa en el contador de firmas
+		MURACHIStatistic statistic = new MURACHIStatistic(databaseHost, databasePort, databaseName, databaseLogin, databasePassword);
+		statistic.incrementSignatures(0);
+		
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
 	
@@ -2766,6 +2771,11 @@ public class MurachiRESTWS {
 		jsonFinalResult.put("signedFileId",fileId + ".bdoc");
 		
 		logger.info(jsonFinalResult.toString());
+		
+		// registrar la firma exitosa en el contador de firmas
+		MURACHIStatistic statistic = new MURACHIStatistic(databaseHost, databasePort, databaseName, databaseLogin, databasePassword);
+		statistic.incrementSignatures(1);
+		
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
 	
@@ -4554,6 +4564,12 @@ public class MurachiRESTWS {
 		jsonFinalResult.put("signedFileId", containerId);
 		
 		logger.info(jsonFinalResult.toString());
+		
+		// registrar la firma exitosa en el contador de firmas
+		MURACHIStatistic statistic = new MURACHIStatistic(databaseHost, databasePort, databaseName, databaseLogin, databasePassword);
+		statistic.incrementSignatures(1);
+
+		
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
 	
