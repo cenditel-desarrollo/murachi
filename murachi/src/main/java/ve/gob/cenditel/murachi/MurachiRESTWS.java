@@ -5124,10 +5124,23 @@ public class MurachiRESTWS {
 	   * Retorna un JSON con estadisticas de uso del servicio.
 	   * 
 	   * @return JSON con estadisticas de uso del servicio.
+	   * 
+	   * @api {get} /Murachi/0.1/archivos/estadisticas Retorna estadísticas básicas de uso del servicio
+	   * @apiName GetEstatistics
+	   * @apiGroup General
+	   * @apiVersion 0.1.0
+	   * 
+	   * @apiExample Example usage:
+       * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/estadisticas -H "Authorization: Basic YWRtaW46YWRtaW4="
+	   * 
+	   * @apiSuccess {String} numeroDeFirmasEjecutadas número de firmas electrónicas ejecutadas hasta la consulta
+	   * @apiSuccess {String} numeroDeFimasIncompletas número de firmas electrónicas incompletas hasta la consulta
+	   * @apiSuccess {String} numeroDeVerificaciones número de verificaciones de firma ejecutadas hasta la consulta 
 	   */
 	  @GET
 	  @Path("/estadisticas")
-	  @Produces(MediaType.APPLICATION_JSON)	
+	  @Produces(MediaType.APPLICATION_JSON)
+	  @Authenticator
 	  public Response getStatisctics()  {
 		  
 		  logger.info("/estadisticas ");
@@ -5144,9 +5157,7 @@ public class MurachiRESTWS {
 			  return Response.status(500).entity(result).build();
 		  }
 		  */
-		  
-		  
-		  
+		  		  
 		  //statistic.incrementSignatures(0);
 		  
 		  int countSignatures = statistic.countOfSigantures();
