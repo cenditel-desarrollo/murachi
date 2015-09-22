@@ -624,7 +624,7 @@ public class MurachiRESTWS {
 					
 		jsonObject = verifyALocalFile(fileId);
 		logger.info("/firmados: " + jsonObject.toString());
-		
+				
 		return Response.status(200).entity(jsonObject.toString()).build();
 	}
 	
@@ -839,6 +839,9 @@ public class MurachiRESTWS {
 				result = jsonObject.toString();
 				logger.info("/{"+idFile+"}: "+ result);
 				
+				// registrar la verificacion exitosa en el contador de verificaciones
+				registerAVerification(1);
+				
 				return Response.status(200).entity(result).build();
 			}
 			// archivo si existe y es un pdf
@@ -849,11 +852,17 @@ public class MurachiRESTWS {
 				result = jsonObject.toString();
 				logger.info("/{"+idFile+"}: "+ result);
 				
+				// registrar la verificacion exitosa en el contador de verificaciones
+				registerAVerification(0);
+				
 				return Response.status(200).entity(result).build();				
 			}
 			// el archivo existe pero es una extension no reconocida
 			else 
 			{
+				// registrar la verificacion exitosa en el contador de verificaciones
+				registerAVerification(2);
+				
 				jsonObject.put("fileExist", "true");
 				jsonObject.put("error", "extension not supported");
 				return Response.status(200).entity(jsonObject.toString()).build();
@@ -955,12 +964,14 @@ public class MurachiRESTWS {
 					
 			String mime = getMimeType(path);
 			System.out.println("mimetype : " + mime);
-			
-			
+						
 			if (mime.equals("application/zip")) {
 				jsonObject = verifySignaturesInBdoc(path, false);
 				result = jsonObject.toString();
 				logger.info("/{"+idFile+"}: "+ result);
+				
+				// registrar la verificacion exitosa en el contador de verificaciones
+				registerAVerification(1);
 				
 				return jsonObject;
 			}
@@ -972,6 +983,9 @@ public class MurachiRESTWS {
 				result = jsonObject.toString();
 				logger.info("/{"+idFile+"}: "+ result);
 				
+				// registrar la verificacion exitosa en el contador de verificaciones
+				registerAVerification(0);
+				
 				return jsonObject;				
 			}
 			// el archivo existe pero es una extension no reconocida
@@ -979,6 +993,10 @@ public class MurachiRESTWS {
 			{
 				jsonObject.put("fileExist", "true");
 				jsonObject.put("error", "extension not supported");
+				
+				// registrar la verificacion exitosa en el contador de verificaciones
+				registerAVerification(2);
+				
 				return jsonObject;
 			}			
 		}	
@@ -1832,14 +1850,23 @@ public class MurachiRESTWS {
 		String result = "";
 
 		if (postsignPar == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+						
 			logger.error("solicitud mal formada.");
 			result = "\"error\":\"solicitud mal formada\"";
+			
 			return Response.status(400).entity(result).build();	
 		}
 		
 		// cadena con la firma
 		String signature = postsignPar.getSignature();
 		if (signature == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.debug("signature == null");
 			logger.error("solicitud mal formada: no esta especificada la firma realizada en el cliente.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificado el identificador del archivo PDF\"";
@@ -1868,6 +1895,10 @@ public class MurachiRESTWS {
 		JSONObject jsonError = new JSONObject();
 		
 		if (fileId == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);			
+			
 			System.out.println("fileId == null");
 			logger.error("Error en completacion de firma: identificador de archivo nulo");
 			//throw new MurachiException("Error en completacion de firma: estructura PdfPKCS7 nula");
@@ -1877,6 +1908,9 @@ public class MurachiRESTWS {
 		}
 		
 		if (stamper == null) {
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			System.out.println("stamper == null");
 			logger.error("Error en completacion de firma: estructura PdfStamper nula");
 			//throw new MurachiException("Error en completacion de firma: estructura PdfPKCS7 nula");
@@ -1886,6 +1920,9 @@ public class MurachiRESTWS {
 		}
 		
 		if (sgn == null) {
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+
 			System.out.println("sgn == null");
 			logger.error("Error en completacion de firma: estructura PdfPKCS7 nula");
 			//throw new MurachiException("Error en completacion de firma: estructura PdfPKCS7 nula");
@@ -1894,6 +1931,9 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(jsonError).build();			
 		}
 		if (hash == null) {
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+
 			System.out.println("hash == null");
 			logger.error("Error en completacion de firma: hash nulo");
 			//throw new MurachiException("Error en completacion de firma: hash nulo");
@@ -1901,6 +1941,9 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(jsonError).build();
 		}
 		if (cal == null) {
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+
 			System.out.println("cal == null");
 			logger.error("Error en completacion de firma: estructura de fecha nula");
 			//throw new MurachiException("Error en completacion de firma: estructura de fecha nula");
@@ -1909,6 +1952,9 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(jsonError).build();
 		}
 		if (sap == null) {
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+
 			System.out.println("sap == null");
 			logger.error("Error en completacion de firma: estructura de apariencia de firma pdf nula");
 			//throw new MurachiException("Error en completacion de firma: estructura de apariencia de firma pdf nula");
@@ -1917,6 +1963,9 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(jsonError).build();
 		}
 		if (os == null) {
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+
 			System.out.println("os == null");
 			logger.error("Error en completacion de firma: bytes de archivo nulos");
 			//throw new MurachiException("Error en completacion de firma: bytes de archivo nulos");
@@ -1943,6 +1992,10 @@ public class MurachiRESTWS {
 			System.out.println("stamper.close");
 			
 		}catch(DocumentException e) {
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+
+			
 			System.out.println("throw new IOException");
 			logger.error("postsignPdf: ocurrio una excepcion", e);
 			//throw new MurachiException(e.getMessage());
@@ -1950,6 +2003,9 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(jsonError).build();			
 			
 		} catch (IOException e) {
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+
 			System.out.println("IOException e");
 			logger.error("postsignPdf: ocurrio una excepcion", e);
 			e.printStackTrace();
@@ -1983,9 +2039,8 @@ public class MurachiRESTWS {
 		logger.info(jsonFinalResult.toString());
 		
 		// registrar la firma exitosa en el contador de firmas
-		MURACHIStatistic statistic = new MURACHIStatistic(databaseHost, databasePort, databaseName, databaseLogin, databasePassword);
-		statistic.incrementSignatures(0);
-		
+		registerASignature(0);
+				
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
 	
@@ -2635,17 +2690,22 @@ public class MurachiRESTWS {
 			session.setAttribute("serializedContainerId", serializedContainerId);		
 		} catch(IOException e)
 		{
+			// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			presignHash.setError(e.getMessage());
 			presignHash.setHash("");
 			return Response.status(500).entity(presignHash).build();
 		} catch(CertificateException e)
 		{
+			// registrar error de firma en estadisticas
+			registerASignatureError(1);
+
 			presignHash.setError(e.getMessage());
 			presignHash.setHash("");
 			return Response.status(500).entity(presignHash).build();
 		}
-			
-			
+						
 		// creacion del json
 		JSONObject jsonHash = new JSONObject();
 		jsonHash.put("hashToSign", hashToSign);
@@ -2750,6 +2810,9 @@ public class MurachiRESTWS {
 		} catch (ClassNotFoundException e) {
 			//e.printStackTrace();
 			
+			// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			JSONObject jsonError = new JSONObject();
 						
 			System.out.println("ClassNotFoundException e: " + e.getMessage());
@@ -2773,8 +2836,9 @@ public class MurachiRESTWS {
 		logger.info(jsonFinalResult.toString());
 		
 		// registrar la firma exitosa en el contador de firmas
-		MURACHIStatistic statistic = new MURACHIStatistic(databaseHost, databasePort, databaseName, databaseLogin, databasePassword);
-		statistic.incrementSignatures(1);
+		//MURACHIStatistic statistic = new MURACHIStatistic(databaseHost, databasePort, databaseName, databaseLogin, databasePassword);
+		//statistic.incrementSignatures(1);		
+		registerASignature(1);
 		
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
@@ -2881,6 +2945,9 @@ public class MurachiRESTWS {
 	            
 	            if (is == null) 
 	            {
+	            	// registrar error de firma en estadisticas
+	    			registerASignatureError(1);
+	    			
 	            	logger.debug("is: null");
 	            	result = "\"error\":\"archivo pasado al recurso es nulo.\"";
 	    			return Response.status(500).entity(result).build();
@@ -4092,6 +4159,9 @@ public class MurachiRESTWS {
 		logger.debug("presignPar: " + presignPar);
 		
 		if (presignPar == null) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.error("solicitud mal formada.");
 			result = "\"error\":\"solicitud mal formada\"";
 			return Response.status(400).entity(result).build();	
@@ -4100,6 +4170,9 @@ public class MurachiRESTWS {
 		// obtener el id del archivo a firmar
 		String containerId = presignPar.getFileId();		
 		if (containerId == null) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.debug("containerId == null");
 			logger.error("solicitud mal formada: no esta especificado el identificador del contenedor.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificado el identificador del contenedor\"";
@@ -4110,6 +4183,9 @@ public class MurachiRESTWS {
 		// cadena con el certificado
 		String certHex = presignPar.getCertificate();		
 		if (certHex == null) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.debug("certHex == null");
 			logger.error("solicitud mal formada: no esta especificado el certificado firmante en hexadecimal.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificado el certificado firmante en hexadecimal\"";
@@ -4119,6 +4195,9 @@ public class MurachiRESTWS {
 
 		String city = presignPar.getCity();
 		if (city == null) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.debug("city == null");
 			logger.error("solicitud mal formada: no esta especificada la ciudad donde se realiza la firma.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificada la ciudad donde se realiza la firma\"";
@@ -4128,6 +4207,9 @@ public class MurachiRESTWS {
 		
 		String state = presignPar.getState();
 		if (state == null) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.debug("state == null");
 			logger.error("solicitud mal formada: no esta especificado el estado donde se realiza la firma.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificado el estado donde se realiza la firma\"";
@@ -4137,6 +4219,9 @@ public class MurachiRESTWS {
 		
 		String postalCode = presignPar.getPostalCode();
 		if (postalCode == null) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.debug("state == null");
 			logger.error("solicitud mal formada: no esta especificado el codigo postal donde se realiza la firma.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificado el codigo postal donde se realiza la firma\"";
@@ -4146,6 +4231,9 @@ public class MurachiRESTWS {
 		
 		String country = presignPar.getCountry();
 		if (country == null) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.debug("country == null");
 			logger.error("solicitud mal formada: no esta especificado el pais donde se realiza la firma.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificado el pais donde se realiza la firma\"";
@@ -4155,6 +4243,9 @@ public class MurachiRESTWS {
 		
 		String role = presignPar.getRole();
 		if (role == null) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.debug("role == null");
 			logger.error("solicitud mal formada: no esta especificado el rol del firmante.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificado el el rol del firmante\"";
@@ -4187,6 +4278,9 @@ public class MurachiRESTWS {
 		File f = new File(fullPathContainerId);
 		
 		if (!f.exists()) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.error("el contenedor "+ fullPathContainerId + " no existe.");
 			result = "\"error\":\"el contenedor "+ fullPathContainerId + " no existe\"";
 			return Response.status(404).entity(result).build();	
@@ -4306,15 +4400,26 @@ public class MurachiRESTWS {
 				
 		} catch(IOException e)
 		{
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
 			presignHash.setError(e.getMessage());
 			presignHash.setHash("");
 			return Response.status(500).entity(presignHash).build();
 		} catch(CertificateException e)
 		{
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			presignHash.setError(e.getMessage());
 			presignHash.setHash("");
 			return Response.status(500).entity(presignHash).build();
 		} catch (ClassNotFoundException e) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			presignHash.setError(e.getMessage());
 			presignHash.setHash("");
 			return Response.status(500).entity(presignHash).build();
@@ -4404,6 +4509,9 @@ public class MurachiRESTWS {
 		String result = "";
 		
 		if (postsignPar == null) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.error("solicitud mal formada.");
 			result = "\"error\":\"solicitud mal formada\"";
 			return Response.status(400).entity(result).build();	
@@ -4412,6 +4520,9 @@ public class MurachiRESTWS {
 		// cadena con la firma
 		String signature = postsignPar.getSignature();
 		if (signature == null) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.debug("signature == null");
 			logger.error("solicitud mal formada: no esta especificada la firma realizada en el cliente.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificada la firma realizada en el cliente\"";
@@ -4422,6 +4533,9 @@ public class MurachiRESTWS {
 		// obtener el id del archivo a firmar
 		String containerId = postsignPar.getContainerId();
 		if (containerId == null) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.debug("containerId == null");
 			logger.error("solicitud mal formada: no esta especificado el identificador del contenedor.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificado el identificador del contenedor\"";
@@ -4439,6 +4553,9 @@ public class MurachiRESTWS {
 		File f = new File(serializedContainerId);
 		
 		if (!f.exists()) {
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			logger.error("el contenedor "+ serializedContainerId + " no existe.");
 			result = "\"error\":\"el contenedor "+ serializedContainerId + " no existe\"";
 			return Response.status(404).entity(result).build();	
@@ -4534,6 +4651,9 @@ public class MurachiRESTWS {
 			
 		} catch (ClassNotFoundException e) {
 			//e.printStackTrace();
+        	
+			// registrar error de firma en estadisticas
+			registerASignatureError(1);
 			
 			JSONObject jsonError = new JSONObject();
 						
@@ -4543,6 +4663,10 @@ public class MurachiRESTWS {
 			jsonError.put("error", e.getMessage());
 			return Response.status(500).entity(jsonError).build();				
 		} catch (DSSException e) {
+			
+        	// registrar error de firma en estadisticas
+			registerASignatureError(1);
+			
 			JSONObject jsonError = new JSONObject();
 			
 			System.out.println("DSSException e: " + e.getMessage());
@@ -4566,9 +4690,7 @@ public class MurachiRESTWS {
 		logger.info(jsonFinalResult.toString());
 		
 		// registrar la firma exitosa en el contador de firmas
-		MURACHIStatistic statistic = new MURACHIStatistic(databaseHost, databasePort, databaseName, databaseLogin, databasePassword);
-		statistic.incrementSignatures(1);
-
+		registerASignature(1);
 		
 		return Response.status(200).entity(jsonFinalResult.toString()).build();
 	}
@@ -5024,6 +5146,7 @@ public class MurachiRESTWS {
 		  */
 		  
 		  
+		  
 		  //statistic.incrementSignatures(0);
 		  
 		  int countSignatures = statistic.countOfSigantures();
@@ -5034,16 +5157,50 @@ public class MurachiRESTWS {
 		  
 		  int countSignaturesError = statistic.countOfSiganturesFailed();
 		  jsonObject.put("numeroDeFimasIncompletas", Integer.toString(countSignaturesError));
+		  logger.debug("firmas incorrectas: "+ Integer.toString(countSignaturesError));
 		  
 		  int countVerifications = statistic.countOfVerifications();
 		  jsonObject.put("numeroDeVerificaciones", Integer.toString(countVerifications));
+		  logger.debug("verificaciones realizadas correctamente: "+ Integer.toString(countVerifications));
 		  
 		  result = jsonObject.toString();
 		  
 		  return Response.status(200).entity(result).build();
 	  }
 	  
+	  /**
+	   * Registra un evento de firma electrónica en la base de datos de estadisticas
+	   * @param type 0-> PDF; 1->BDOC; 2->UNKN
+	   */
+	  private void registerASignature(int type) {
+			// registrar la verificacion exitosa en el contador de verificaciones
+			  MURACHIStatistic statistic = new MURACHIStatistic(databaseHost, databasePort, databaseName, databaseLogin, databasePassword);
+			  statistic.incrementSignatures(type);
+		  }
 	  
+	  /**
+	   * Registra un evento de verificacion de firma electrónica en la base de datos de estadisticas
+	   * @param type 0-> PDF; 1->BDOC; 2->UNKN
+	   */
+	  private void registerAVerification(int type) {
+		  // registrar la verificacion exitosa en el contador de verificaciones
+		  MURACHIStatistic statistic = new MURACHIStatistic(databaseHost, databasePort, databaseName, databaseLogin, databasePassword);
+		  statistic.incrementVerifications(type);		  
+	  }
+	  
+	  /**
+	   * Registra un evento de firma electrónica incompleta en la base de datos de estadisticas
+	   * @param type 0-> PDF; 1->BDOC; 2->UNKN
+	   */
+	  private void registerASignatureError(int type) {
+		  // registrar la verificacion exitosa en el contador de verificaciones
+		  MURACHIStatistic statistic = new MURACHIStatistic(databaseHost, databasePort, databaseName, databaseLogin, databasePassword);
+		  statistic.incrementErrorSignatures(type);	  
+	  }
+      
+	  
+	
+	 
 	
 	  
 	// ************************************************************************
@@ -6015,7 +6172,99 @@ public class MurachiRESTWS {
 	}
 	
 	
+	@POST
+	@Path("/phpcargas")
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
+	public Response uploadPHP(FormDataMultiPart formParams) throws MurachiException {
+		
+		logger.info("recurso /phpcargas");
+		logger.debug("	uploadPHP...");
+		
+		// cadena con la respuesta
+		String result = "";
+		
+		String fileId = "";
+		
+		if (formParams == null) {
+			logger.error("solicitud mal formada.");
+			result = "\"error\":\"solicitud mal formada\"";
+			return Response.status(400).entity(result).build();
+		}
+		
+		Map<String, List<FormDataBodyPart>> fieldsByName = formParams.getFields();
+		logger.debug("	contenido de Map: " + Integer.toString(fieldsByName.size()));
+		
+		for (List<FormDataBodyPart> fields : fieldsByName.values())
+	    {
+	        for (FormDataBodyPart field : fields)
+	        {
+	            InputStream is = field.getEntityAs(InputStream.class);
+	            
+	            if (is == null) 
+	            {
+	            	logger.debug("is: null");
+	            	result = "\"error\":\"archivo pasado al recurso es nulo.\"";
+	    			return Response.status(500).entity(result).build();
+	            }	           
+	            
+	            FormDataContentDisposition file = field.getFormDataContentDisposition();	            
+	            String fileName = file.getFileName();
+	            logger.debug("fileName: " + fileName);	            
+	            /* 
+	            if (fileName == null)
+	            {
+	            	logger.debug("fileName: null");
+	            	result = "\"error\":\"nombre del archivo pasado al recurso es nulo. Debe especificar un nombre de archivo.\"";
+	    			return Response.status(500).entity(result).build();
+	            }	            
+	            
+	            String mimeType = field.getMediaType().toString();	            	            
+	            logger.debug("mimeType: " + mimeType);
+	            
+	            if (mimeType == null)
+	            {
+	            	logger.debug("mimeType: null");
+	            	result = "\"error\":\"tipo mime del archivo pasado al recurso es nulo.\"";
+	    			return Response.status(500).entity(result).build();
+	            }
+		    */
+	            	            	            
+	            try
+	            {
+	            	//addFileToBDOCContainer(is, fileName, mimeType, c);
+	            	
+	            	fileId = UUID.randomUUID().toString();
+	        		System.out.println(fileId);
+	        		
+	        		saveToDisk(is, null, fileId);
+	            	logger.info("se guardó el archivo" + fileId + "en el disco");
+	            }
+	            catch(Exception e) 
+	            {
+	            	logger.debug("excepcion: " + e.getMessage());	            	
+	    			result = "\"error\":\"no se pudo guardar el archivo en el servidor.\"";
+	    			return Response.status(500).entity(result).build();
+	            }	            
+	            	           
+	        }
+	    }		
+		
+		//logger.debug("cantidad de DataFile del contenedor: " + Integer.toString(c.getDataFiles().size()));
+		//String fileId = UUID.randomUUID().toString();
+		//System.out.println("id contenedor serializado: "+fileId);
+				
+		// establecer el nombre del archivo a serializar 
+		//String serializedContainerId = SERVER_UPLOAD_LOCATION_FOLDER + fileId + "-serialized";
+		//logger.debug("	id de contenedor serializado: "+ serializedContainerId);
 	
+		result = "{\"fileId\":\""+ fileId +"\"}";
+		logger.debug(result);
+		
+		logger.debug("	{containerId:"+ fileId+"}");
+		return Response.status(200).entity(result).build();
+	}
 	
 	
 	  

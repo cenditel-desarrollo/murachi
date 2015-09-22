@@ -71,14 +71,16 @@ public class MURACHIStatistic {
             stmt = conn.createStatement();
             
             sql = "CREATE TABLE VERIFICATIONS " +
-                    "(VERIFICATION_ID SERIAL PRIMARY KEY NOT NULL)";
+                    "(VERIFICATION_ID SERIAL PRIMARY KEY NOT NULL,"+
+            		"TYPE CHAR(4) NOT NULL)";
             stmt.executeUpdate(sql);                        
             System.out.println("table VERIFICATIONS created!");
             
             stmt = conn.createStatement();
             
             sql = "CREATE TABLE SIGNATURES_ERROR " +
-                    "(SIGNATURE_ERROR_ID SERIAL PRIMARY KEY NOT NULL)";
+                    "(SIGNATURE_ERROR_ID SERIAL PRIMARY KEY NOT NULL, "+
+            		"TYPE CHAR(4) NOT NULL)";
             stmt.executeUpdate(sql);
             System.out.println("table SIGNATURE_ERROR created!");
             
@@ -145,6 +147,91 @@ public class MURACHIStatistic {
         }
         //System.out.println("Records created successfully");
     }
+    
+    /**
+     * Incrementa en una unidad la cuenta de las firmas incompletas realizadas con el servicio
+     * 
+     * @param type tipo de firma: 0->PDF, 1->BDOC
+     * 
+     */
+    public void incrementErrorSignatures(int type) {
+    	Connection c = null;
+        Statement stmt = null;
+        try {
+           Class.forName("org.postgresql.Driver");
+           
+           //c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/databasemurachi", databaseLogin, databasePassword);
+           c = DriverManager.getConnection(databaseConnection, databaseLogin, databasePassword);
+           
+           c.setAutoCommit(false);
+           //System.out.println("Opened database successfully");
+
+           stmt = c.createStatement();
+           String signatureType = "";
+           
+           if (type == 0) {
+        	   signatureType = "pdf";
+           }else if (type == 1){
+        	   signatureType = "bdoc";
+           }else{
+        	   signatureType = "unknown";
+           }
+        	   
+           String sql = "INSERT INTO SIGNATURES_ERROR (TYPE) VALUES ('"+ signatureType +"');";
+           stmt.executeUpdate(sql);
+           stmt.close();
+           c.commit();
+           c.close();
+        } catch (Exception e) {
+        	logger.error(e.getClass().getName()+": "+ e.getMessage());
+            System.err.println( e.getClass().getName()+": "+ e.getMessage() );
+        }
+        //System.out.println("Records created successfully");
+    }
+    
+    
+    /**
+     * Incrementa en una unidad la cuenta de las verificaciones de firmas realizadas con el servicio
+     * 
+     * @param type tipo de firma: 0->PDF, 1->BDOC
+     * 
+     */
+    public void incrementVerifications(int type) {
+    	Connection c = null;
+        Statement stmt = null;
+        try {
+           Class.forName("org.postgresql.Driver");
+           
+           //c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/databasemurachi", databaseLogin, databasePassword);
+           c = DriverManager.getConnection(databaseConnection, databaseLogin, databasePassword);
+           
+           c.setAutoCommit(false);
+           //System.out.println("Opened database successfully");
+
+           stmt = c.createStatement();
+           String signatureType = "";
+           
+           if (type == 0) {
+        	   signatureType = "pdf";
+           }else if (type == 1){
+        	   signatureType = "bdoc";
+           }else{
+        	   signatureType = "unkn";
+           }
+        	   
+           String sql = "INSERT INTO VERIFICATIONS (TYPE) VALUES ('"+ signatureType +"');";
+           stmt.executeUpdate(sql);
+           stmt.close();
+           c.commit();
+           c.close();
+        } catch (Exception e) {
+        	logger.error(e.getClass().getName()+": "+ e.getMessage());
+            System.err.println( e.getClass().getName()+": "+ e.getMessage() );
+        }
+        
+    }
+    
+    
     
     /**
      * Retorna el número de firmas realizadas exitosamente con el servicio.
