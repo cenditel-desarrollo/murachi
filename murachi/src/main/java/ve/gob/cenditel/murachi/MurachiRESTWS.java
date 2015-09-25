@@ -1459,6 +1459,10 @@ public class MurachiRESTWS {
 
 		String result = "";
 		if (presignPar == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.error("solicitud mal formada.");
 			result = "\"error\":\"solicitud mal formada\"";
 			return Response.status(400).entity(result).build();	
@@ -1467,6 +1471,10 @@ public class MurachiRESTWS {
 		// obtener el id del archivo 
 		String fileId = presignPar.getFileId();
 		if (fileId == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.debug("fileId == null");
 			logger.error("solicitud mal formada: no esta especificado el identificador del archivo PDF.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificado el identificador del archivo PDF\"";
@@ -1477,6 +1485,10 @@ public class MurachiRESTWS {
 		// cadena con el certificado
 		String certHex = presignPar.getCertificate();
 		if (certHex == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.debug("certHex == null");
 			logger.error("solicitud mal formada: no esta especificado el certificado del firmante en hexadecimal.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificado el certificado del firmante en hexadecimal.\"";
@@ -1487,6 +1499,10 @@ public class MurachiRESTWS {
 		// razon de la firma
 		String reason = presignPar.getReason();
 		if (reason == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.debug("certHex == null");
 			logger.error("solicitud mal formada: no esta especificada la razon de la firma.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificada la razon de la firma.\"";
@@ -1497,6 +1513,10 @@ public class MurachiRESTWS {
 		// ubicacion de la firma
 		String location = presignPar.getLocation();
 		if (location == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.debug("location == null");
 			logger.error("solicitud mal formada: no esta especificada la ubicación donde se realiza la firma.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificada la ubicación donde se realiza la firma.\"";
@@ -1507,6 +1527,10 @@ public class MurachiRESTWS {
 		// contacto del firmante
 		String contact = presignPar.getContact();
 		if (contact == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.debug("contact == null");
 			logger.error("solicitud mal formada: no esta especificada la informacion de contacto del firmante.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificada la informacion de contacto del firmante.\"";
@@ -1517,6 +1541,10 @@ public class MurachiRESTWS {
 		// firma visible
 		Boolean signatureVisible = presignPar.getSignatureVisible(); 
 		if (signatureVisible == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.debug("signatureVisible == null");
 			logger.error("solicitud mal formada: no esta especificado si la firma PDF es visible o no.");
 			result = "\"error\":\"solicitud mal formada: : no esta especificado si la firma PDF es visible o no.\"";
@@ -1535,6 +1563,9 @@ public class MurachiRESTWS {
 			presignHash.setError("El archivo que desea firmar no es un PDF.");
 			presignHash.setHash("");
 			//return presignHash;
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
 									
 			//result = presignHash.toString();
 			logger.info("El archivo que desea firmar no es un PDF.");
@@ -1552,6 +1583,9 @@ public class MurachiRESTWS {
 				System.out.println("error chain[0] == null");
 				logger.error("presignPdf: error en carga de certificado de firmante");
 				//throw new MurachiException("presignPdf: error en carga de certificado de firmante");
+				
+				// registrar error de firma en estadisticas
+				registerASignatureError(0);
 				
 				presignHash.setError("error en carga de certificado de firmante");
 				presignHash.setHash("");
@@ -1673,6 +1707,10 @@ public class MurachiRESTWS {
 				
 			
 		} catch (CertificateException e1) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.error("presignPdf ocurrio una excepcion ", e1);
 			e1.printStackTrace();
 			//throw new MurachiException(e1.getMessage());
@@ -1681,6 +1719,10 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(presignHash).build();			
 			
 		} catch (InvalidPdfException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
 			//presignHash.setError("No se pudo leer el archivo PDF en el servidor");
@@ -1690,6 +1732,10 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(presignHash).build();
 			
 		} catch (IOException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
 			//throw new MurachiException(e.getMessage());
@@ -1699,6 +1745,10 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(presignHash).build();
 			
 		} catch (DocumentException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			e.printStackTrace();
 			//throw new MurachiException(e.getMessage());
@@ -1708,6 +1758,10 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(presignHash).build();
 			
 		} catch (InvalidKeyException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			//e.printStackTrace();
 			//throw new MurachiException(e.getMessage());
@@ -1717,6 +1771,10 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(presignHash).build();
 			
 		} catch (NoSuchProviderException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			//e.printStackTrace();
 			//throw new MurachiException(e.getMessage());
@@ -1726,6 +1784,10 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(presignHash).build();
 			
 		} catch (NoSuchAlgorithmException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			//e.printStackTrace();
 			//throw new MurachiException(e.getMessage());
@@ -1735,6 +1797,10 @@ public class MurachiRESTWS {
 			return Response.status(500).entity(presignHash).build();
 			
 		} catch (GeneralSecurityException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
 			logger.error("presignPdf ocurrio una excepcion ", e);
 			//e.printStackTrace();
 			//throw new MurachiException(e.getMessage());
@@ -1869,12 +1935,23 @@ public class MurachiRESTWS {
 			
 			logger.debug("signature == null");
 			logger.error("solicitud mal formada: no esta especificada la firma realizada en el cliente.");
-			result = "\"error\":\"solicitud mal formada: : no esta especificado el identificador del archivo PDF\"";
+			result = "\"error\":\"solicitud mal formada: no esta especificado el identificador del archivo PDF\"";
 			return Response.status(400).entity(result).build();
 		}
 		logger.debug("	signature: " + signature);
 		
 		HttpSession session = req.getSession(false);
+		
+		if (session == null) {
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+						
+			logger.debug("session == null");
+			logger.error("HTTPSession es null");
+			result = "\"error\":\" Sesion HTTPSession es null.\"";
+			return Response.status(500).entity(result).build();
+		}
+		
 		
 		String fileId = (String) session.getAttribute("fileId");
 		System.out.println("fileId: " + fileId);
