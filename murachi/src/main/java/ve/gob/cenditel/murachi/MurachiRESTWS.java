@@ -5238,7 +5238,7 @@ public class MurachiRESTWS {
 		  //statistic.incrementSignatures(0);
 		  
 		  int countSignatures = statistic.countOfSigantures();
-		  logger.debug("fimas realizadas correctamente: "+ Integer.toString(countSignatures));
+		  logger.debug("firmas realizadas correctamente: "+ Integer.toString(countSignatures));
 		  
 		  JSONObject jsonObject = new JSONObject();
 		  jsonObject.put("numeroDeFirmasEjecutadas", Integer.toString(countSignatures));
