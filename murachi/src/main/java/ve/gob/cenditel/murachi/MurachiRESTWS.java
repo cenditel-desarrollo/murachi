@@ -126,8 +126,8 @@ public class MurachiRESTWS {
 	private static final String API_VERSION = "0.1.0";
 	
 	// debe colocarse la barra al final de la ruta
-	//private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/murachi/";
-	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/var/lib/tomcat7/murachiWorkingDirectory/";
+	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/murachi/";
+	//private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/var/lib/tomcat7/murachiWorkingDirectory/";
 		
 	private static final String SHA256_MESSAGE_DIGEST = "SHA256";
 	
@@ -5291,12 +5291,99 @@ public class MurachiRESTWS {
 	 
 	
 	  
-	// ************************************************************************
-	// ************************************************************************
-	// ************************************************************************
+// ************************************************************************
+// ************************************************************************
+// ************************************************************************
 	  
+	// prueba de Jorge
+	@POST
+	@Path("/cargar")
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
+	public Response uploadFile(FormDataMultiPart formParams) throws MurachiException {
+		//return null;
+		
+		logger.info("recurso /cargar");
+		logger.debug("	uploadFile...");
+		
+		// cadena con la respuesta
+		String result = "";
+		
+		if (formParams == null) {
+			logger.error("solicitud mal formada.");
+			result = "\"error\":\"solicitud mal formada\"";
+			return Response.status(400).entity(result).build();
+		}
+		
+		JSONObject jsonObjectResult = new JSONObject();
+		
+		
+		Map<String, List<FormDataBodyPart>> fieldsByName = formParams.getFields();
+		logger.debug("	contenido de Map: " + Integer.toString(fieldsByName.size()));
+		
+		for (List<FormDataBodyPart> fields : fieldsByName.values())
+	    {
+	        for (FormDataBodyPart field : fields)
+	        {
+	            InputStream is = field.getEntityAs(InputStream.class);
+	            
+	            if (is == null) 
+	            {
+	            	// registrar error de firma en estadisticas
+	    			registerASignatureError(0);
+	    			
+	            	logger.debug("is: null");
+	            	result = "\"error\":\"archivo pasado al recurso es nulo.\"";
+	    			return Response.status(500).entity(result).build();
+	            }	           
+	            
+	            FormDataContentDisposition file = field.getFormDataContentDisposition();	            
+	            String fileName = file.getFileName();
+	            logger.debug("fileName: " + fileName);	            
+	            
+	            if (fileName == null)
+	            {
+	            	logger.debug("fileName: null");
+	            	result = "\"error\":\"nombre del archivo pasado al recurso es nulo. Debe especificar un nombre de archivo.\"";
+	    			return Response.status(500).entity(result).build();
+	            }	            
+	            
+	            String mimeType = field.getMediaType().toString();	            	            
+	            logger.debug("mimeType: " + mimeType);
+	            
+	            if (mimeType == null)
+	            {
+	            	logger.debug("mimeType: null");
+	            	result = "\"error\":\"tipo mime del archivo pasado al recurso es nulo.\"";
+	    			return Response.status(500).entity(result).build();
+	            }
+	            	     
+	            String fileId = UUID.randomUUID().toString();
+	            System.out.println(fileId);
+	            logger.debug("fileId: " + fileId);
+	           
+	            try {
+	            	saveToDisk(is, null, fileId);
+		            logger.debug("fileId: " + fileId + "guardado en el sistema de archivos");
+	            }
+	            catch(MurachiException e) {
+	            	logger.error("error de carga de archivo: "+ e.getMessage());
+	            	jsonObjectResult.put("error", "fallo carga del archivo "+fileName+ " al servidor.");
+	            	result = jsonObjectResult.toString();	            	
+	            	return Response.status(500).entity(result).build();	            	
+	            }
+	            //result = "\"fileId\":" + fileId;
+	            jsonObjectResult.put("fileId", fileId);	            	            	           
+	        }
+	    }
+		//result = "\"msg\":\"continuar con la prueba\"";
+		
+		result = jsonObjectResult.toString();
+		
+		return Response.status(200).entity(result).build();		
+	} 
 	  
-	
 
 	// pruebas de funciones para gestionar un contenedor BDOC
 		
