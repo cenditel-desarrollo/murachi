@@ -126,8 +126,8 @@ public class MurachiRESTWS {
 	private static final String API_VERSION = "0.1.0";
 	
 	// debe colocarse la barra al final de la ruta
-	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/murachi/";
-	//private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/var/lib/tomcat7/murachiWorkingDirectory/";
+	//private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/tmp/murachi/";
+	private static final String SERVER_UPLOAD_LOCATION_FOLDER = "/var/lib/tomcat7/murachiWorkingDirectory/";
 		
 	private static final String SHA256_MESSAGE_DIGEST = "SHA256";
 	
@@ -275,7 +275,7 @@ public class MurachiRESTWS {
 		
 		if (uploadedInputStream == null) {
 			System.out.println("uploadedInputStream == null");
-			logger.error("uploadedInputStream != null. datos recibidos del formulario son nulos.");
+			logger.error("uploadedInputStream == null. datos recibidos del formulario son nulos.");
 			//throw new MurachiException("uploadedInputStream != null. datos recibidos del formulario son nulos.");
 			
 			return Response.status(400).entity("{\"error\": \"datos recibidos del formulario son nulos\"}").type(MediaType.APPLICATION_JSON).build();
@@ -1137,7 +1137,7 @@ public class MurachiRESTWS {
 		SimpleDateFormat date_format = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss.SS");
 		System.out.println("Signed on: " + date_format.format(pkcs7.getSignDate().getTime()));
 		integrityMap.put("signedOn", date_format.format(pkcs7.getSignDate().getTime()).toString());
-		
+		/*
 		if (pkcs7.getTimeStampDate() != null) {
 			System.out.println("TimeStamp: " + date_format.format(pkcs7.getTimeStampDate().getTime()));
 			integrityMap.put("timeStamp", date_format.format(pkcs7.getTimeStampDate().getTime()).toString());
@@ -1156,6 +1156,34 @@ public class MurachiRESTWS {
 			System.out.println("Timestamp verified?: " + "null");
 			integrityMap.put("timeStampVerified", "null");
 		}
+		*/
+		if (pkcs7.getTimeStampDate() != null) {
+			System.out.println("TimeStamp: " + date_format.format(pkcs7.getTimeStampDate().getTime()));
+			integrityMap.put("timeStamp", date_format.format(pkcs7.getTimeStampDate().getTime()).toString());
+			//TimeStampToken ts = pkcs7.getTimeStampToken();
+			//System.out.println("TimeStamp service: " + ts.getTimeStampInfo().getTsa());
+			//integrityMap.put("timeStampService", ts.getTimeStampInfo().getTsa().toString());
+			System.out.println("Timestamp verified? " + pkcs7.verifyTimestampImprint());
+			integrityMap.put("timeStampVerified", Boolean.toString(pkcs7.verifyTimestampImprint()));
+		}else{
+			System.out.println("TimeStamp: " + "null");
+			integrityMap.put("timeStamp", "null");
+			
+			//System.out.println("TimeStamp service: " + "null");
+			//integrityMap.put("timeStampService", "null");
+			
+			System.out.println("Timestamp verified?: " + "null");
+			integrityMap.put("timeStampVerified", "null");
+		}
+		if (pkcs7.getTimeStampToken().getTimeStampInfo().getTsa() != null) {
+			TimeStampToken ts = pkcs7.getTimeStampToken();
+			System.out.println("TimeStamp service: " + ts.getTimeStampInfo().getTsa());
+			integrityMap.put("timeStampService", ts.getTimeStampInfo().getTsa().toString());
+		}else{
+			System.out.println("TimeStamp service: " + "null");
+			integrityMap.put("timeStampService", "null");
+		}
+		
 		
 		System.out.println("Location: " + pkcs7.getLocation());
 		integrityMap.put("location", pkcs7.getLocation());		
@@ -1702,6 +1730,9 @@ public class MurachiRESTWS {
 			session.setAttribute("baos", baos);
 			session.setAttribute("fileId", fileId);
 			
+			logger.debug("***** session: " + session.getId());
+			
+			
 			presignHash.setHash(hashToSign);
 			presignHash.setError("");
 				
@@ -1942,6 +1973,8 @@ public class MurachiRESTWS {
 		
 		HttpSession session = req.getSession(false);
 		
+		logger.debug("***** session: " + session.getId());
+		
 		if (session == null) {
 			// registrar error de firma en estadisticas
 			registerASignatureError(0);
@@ -2175,7 +2208,7 @@ public class MurachiRESTWS {
 		
 		Container container = null;
 		
-		Configuration configuration = new Configuration(Configuration.Mode.PROD);
+		Configuration configuration = new Configuration(Configuration.Mode.TEST);
 		
 		configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 		
@@ -2235,9 +2268,9 @@ public class MurachiRESTWS {
 		
 			jsonSignatures.put("numberOfSignatures", numberOfSignatures);
 			
-			System.out.println("->container.validate()");
+			System.out.println("*********************->container.validate()");
 			ValidationResult validationResult = container.validate();
-			System.out.println("...container.validate()");
+			System.out.println("*********************...container.validate()");
 			
 			
 			List<DigiDoc4JException> exceptions = validationResult.getContainerErrors();
@@ -2314,7 +2347,7 @@ public class MurachiRESTWS {
 		Security.addProvider(new BouncyCastleProvider());
 		//Container container = null;
 		
-		Configuration configuration = new Configuration(Configuration.Mode.PROD);
+		Configuration configuration = new Configuration(Configuration.Mode.TEST);
 		
 		configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 		
@@ -2706,7 +2739,7 @@ public class MurachiRESTWS {
 			Security.addProvider(new BouncyCastleProvider());
 			Container container = null;
 		
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			Configuration configuration = new Configuration(Configuration.Mode.TEST);
 		
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 		
@@ -3349,7 +3382,7 @@ public class MurachiRESTWS {
 	    		    	
 	    	Security.addProvider(new BouncyCastleProvider());
 						
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			Configuration configuration = new Configuration(Configuration.Mode.TEST);
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 		
@@ -3453,7 +3486,7 @@ public class MurachiRESTWS {
 	    	Security.addProvider(new BouncyCastleProvider());
 			Container container = null;
 			
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			Configuration configuration = new Configuration(Configuration.Mode.TEST);
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 		
@@ -3573,7 +3606,7 @@ public class MurachiRESTWS {
 	    	Security.addProvider(new BouncyCastleProvider());
 			Container container = null;
 			
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			Configuration configuration = new Configuration(Configuration.Mode.TEST);
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 		
@@ -3711,7 +3744,7 @@ public class MurachiRESTWS {
 	    		    	
 	    	Security.addProvider(new BouncyCastleProvider());
 						
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			Configuration configuration = new Configuration(Configuration.Mode.TEST);
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 		
@@ -3836,7 +3869,7 @@ public class MurachiRESTWS {
 	    		    	
 	    	Security.addProvider(new BouncyCastleProvider());
 						
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			Configuration configuration = new Configuration(Configuration.Mode.TEST);
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 		
@@ -3935,7 +3968,7 @@ public class MurachiRESTWS {
 	    		    	
 	    	Security.addProvider(new BouncyCastleProvider());
 						
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			Configuration configuration = new Configuration(Configuration.Mode.TEST);
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 		
@@ -4083,7 +4116,7 @@ public class MurachiRESTWS {
 	    		    	
 	    	Security.addProvider(new BouncyCastleProvider());
 						
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			Configuration configuration = new Configuration(Configuration.Mode.TEST);
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 		
@@ -4369,7 +4402,7 @@ public class MurachiRESTWS {
 			Security.addProvider(new BouncyCastleProvider());
 			Container container = null;
 		
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);
+			Configuration configuration = new Configuration(Configuration.Mode.TEST);
 		
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 		
@@ -4421,7 +4454,7 @@ public class MurachiRESTWS {
 			Security.addProvider(new BouncyCastleProvider());
 			Container container = null;			
 		
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);		
+			Configuration configuration = new Configuration(Configuration.Mode.TEST);		
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 
@@ -4650,7 +4683,7 @@ public class MurachiRESTWS {
 		        
 		        //Configuration configuration = initConfig(); // also need to re-initialize configuration settings
 		        
-		        Configuration configuration = new Configuration(Configuration.Mode.PROD);		
+		        Configuration configuration = new Configuration(Configuration.Mode.TEST);		
 		    	configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 		    	configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);        
 		        
@@ -4708,7 +4741,7 @@ public class MurachiRESTWS {
 			deserializedContainer.save(SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bdoc");
 			
 			// abrir el contenedor
-			Configuration configuration = new Configuration(Configuration.Mode.PROD);			
+			Configuration configuration = new Configuration(Configuration.Mode.TEST);			
 			configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 			configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);			
 			Container c = Container.open(SERVER_UPLOAD_LOCATION_FOLDER + containerId + ".bdoc", configuration);
@@ -4785,7 +4818,7 @@ public class MurachiRESTWS {
 		
 		Container container = null;
 		
-		Configuration configuration = new Configuration(Configuration.Mode.PROD);
+		Configuration configuration = new Configuration(Configuration.Mode.TEST);
 	
 		configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 	
@@ -4810,7 +4843,7 @@ public class MurachiRESTWS {
 		
 		Container container = null;
 		
-		Configuration configuration = new Configuration(Configuration.Mode.PROD);	
+		Configuration configuration = new Configuration(Configuration.Mode.TEST);	
 		configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 		configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 
@@ -5183,7 +5216,7 @@ public class MurachiRESTWS {
 			  ByteArrayInputStream byteIn = new ByteArrayInputStream(byteOut.toByteArray());
 
 			  //Configuration configuration = initConfig(); // also need to re-initialize configuration settings
-			  Configuration configuration = new Configuration(Configuration.Mode.PROD);		
+			  Configuration configuration = new Configuration(Configuration.Mode.TEST);		
 			  configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 			  configuration.setTslLocation(DIGIDOC4J_TSL_LOCATION);
 			  Container container2 = Container.open(byteIn, configuration);
@@ -5483,7 +5516,7 @@ public class MurachiRESTWS {
 			        
 			        //Configuration configuration = initConfig(); // also need to re-initialize configuration settings
 			        
-			        Configuration configuration = new Configuration(Configuration.Mode.PROD);		
+			        Configuration configuration = new Configuration(Configuration.Mode.TEST);		
 			    	configuration.loadConfiguration("/tmp/digidoc4j.yaml");
 			    	configuration.setTslLocation("file:///tmp/venezuela-tsl.xml");        
 			        
@@ -6010,7 +6043,7 @@ public class MurachiRESTWS {
 		
 		Security.addProvider(new BouncyCastleProvider());
 		
-		Configuration configuration = new Configuration(Configuration.Mode.PROD);
+		Configuration configuration = new Configuration(Configuration.Mode.TEST);
 		
 		configuration.loadConfiguration("/tmp/digidoc4j.yaml");
 		//configuration.setTslLocation("http://localhost/trusted-test-mp.xml");
@@ -6025,7 +6058,7 @@ public class MurachiRESTWS {
 	    container.setSignatureParameters(signatureParameters);
 	    container.setSignatureProfile(SignatureProfile.B_BES);
 	    container.addDataFile("/tmp/salida.txt", "text/plain");
-	    container.sign(new PKCS12Signer("/tmp/tibisay.p12", "123456".toCharArray()));
+	    container.sign(new PKCS12Signer("/tmp/ayzarra.p12", "ayzarra".toCharArray()));
 //	    Container container = Container.open("util/faulty/bdoc21-bad-nonce-content.bdoc");
 	    container.save("/tmp/signed.bdoc");
 	    ValidationResult result = container.validate();
@@ -6047,7 +6080,7 @@ public class MurachiRESTWS {
 		
 		Security.addProvider(new BouncyCastleProvider());
 		
-		Configuration configuration = new Configuration(Configuration.Mode.PROD);
+		Configuration configuration = new Configuration(Configuration.Mode.TEST);
 		
 		configuration.loadConfiguration(DIGIDOC4J_CONFIGURATION);
 		
