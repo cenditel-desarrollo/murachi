@@ -1175,10 +1175,15 @@ public class MurachiRESTWS {
 			System.out.println("Timestamp verified?: " + "null");
 			integrityMap.put("timeStampVerified", "null");
 		}
-		if (pkcs7.getTimeStampToken().getTimeStampInfo().getTsa() != null) {
-			TimeStampToken ts = pkcs7.getTimeStampToken();
-			System.out.println("TimeStamp service: " + ts.getTimeStampInfo().getTsa());
-			integrityMap.put("timeStampService", ts.getTimeStampInfo().getTsa().toString());
+		if (pkcs7.getTimeStampToken() != null) {
+			if (pkcs7.getTimeStampToken().getTimeStampInfo().getTsa() != null) {
+				TimeStampToken ts = pkcs7.getTimeStampToken();
+				System.out.println("TimeStamp service: " + ts.getTimeStampInfo().getTsa());
+				integrityMap.put("timeStampService", ts.getTimeStampInfo().getTsa().toString());
+			}else{
+				System.out.println("TimeStamp service: " + "null");
+				integrityMap.put("timeStampService", "null");
+			}			
 		}else{
 			System.out.println("TimeStamp service: " + "null");
 			integrityMap.put("timeStampService", "null");
