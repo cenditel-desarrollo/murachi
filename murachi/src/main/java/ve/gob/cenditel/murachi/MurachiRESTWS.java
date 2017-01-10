@@ -1655,16 +1655,49 @@ public class MurachiRESTWS {
 	    	
 	    	//sap.setVisibleSignature(new Rectangle(36, 748, 144,780),1, "sig");
 	    	
+	    	logger.debug( "verificar la orientacion de la primera pagina" );
+	    	// para verificar la orientacion de la primera pagina
+	    	Rectangle rectangle = reader.getPageSizeWithRotation(1);
+	    	
 	    	if (!pdfAlreadySigned(reader) && signatureVisible){
-	    		sap.setVisibleSignature(new Rectangle(36, 748, 144, 780),1, "sig1");
+	    		//sap.setVisibleSignature(new Rectangle(36, 748, 144, 780),1, "sig1");
+	    		
+	    		// verificar la orientacion de la pagina	    		
+	    		if(rectangle.getHeight() >= rectangle.getWidth()) {
+	    			logger.debug( "orientacion de primera pagina: VERTICAL" );	            	
+	                // vertical
+	                sap.setVisibleSignature(new Rectangle(36, 748, 144, 780), 1, "sig1");
+	            } else {
+	            	logger.debug( "orientacion de primera pagina: APAISADO" );
+	            	// apaisado
+	                sap.setVisibleSignature(new Rectangle(36, 600, 200, 540), 1, "sig1");
+	            }
+	    		
 			}else{
 				if (signatureVisible)
 				{
 					int idSig = numberOfSignatures(reader)+1;
 					//sap.setVisibleSignature(new Rectangle(36, 700, 144, 732),1, "sig"+Integer.toString(idSig));
-					sap.setVisibleSignature(
-							new Rectangle(36, (748-(numberOfSignatures(reader)*38)), 144, (780-(numberOfSignatures(reader)*38))),
-								1, "sig"+Integer.toString(idSig));	
+					//sap.setVisibleSignature(
+					//		new Rectangle(36, (748-(numberOfSignatures(reader)*38)), 144, (780-(numberOfSignatures(reader)*38))),
+					//			1, "sig"+Integer.toString(idSig));
+
+					
+					// verificar la orientacion de la pagina	    		
+		    		if(rectangle.getHeight() >= rectangle.getWidth()) {
+		    			logger.debug( "orientacion de primera pagina: VERTICAL" );
+		                // vertical
+		            	sap.setVisibleSignature(
+								new Rectangle(36, (748-(numberOfSignatures(reader)*38)), 144, (780-(numberOfSignatures(reader)*38))),
+									1, "sig"+Integer.toString(idSig));
+		            } else {
+		            	logger.debug( "orientacion de primera pagina: APAISADO" );
+		            	// apaisado
+		            	sap.setVisibleSignature(
+		            			new Rectangle(36, (600-(numberOfSignatures(reader)*48)), 200, (540-(numberOfSignatures(reader)*48))), 
+		            				1, "sig"+Integer.toString(idSig));
+		            }
+					
 				}
 				
 			}
