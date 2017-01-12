@@ -1658,7 +1658,57 @@ public class MurachiRESTWS {
 	    	logger.debug( "verificar la orientacion de la primera pagina" );
 	    	// para verificar la orientacion de la primera pagina
 	    	Rectangle rectangle = reader.getPageSizeWithRotation(1);
+	    	Rectangle pageSize = reader.getPageSize(1);
+	    	float width = rectangle.getWidth();
 	    	
+	    	int llx = 0;
+	        int lly = 0;
+	        int urx = 0;
+	        int ury = 0;  
+	        int idSig = 0;
+	        
+	        if(rectangle.getHeight() >= rectangle.getWidth()) {
+	        	System.out.println( "VERTICAL" );
+	    		// vertical
+	    		llx = (int)((width*0.06)+0.5); // vertical
+	    		lly = (int)(pageSize.getTop() - pageSize.getTop()*0.08); // vertical
+	    		urx = (int)((width*0.3)+0.5); // vertical
+	    		ury = (int) (pageSize.getTop() - pageSize.getTop()*0.02); // vertical
+	    		
+	    		if ( !pdfAlreadySigned(reader) ){
+	    			sap.setVisibleSignature(new Rectangle(llx, lly, urx, ury), 1, "sig1");
+	    		} else {
+	    			idSig = numberOfSignatures(reader)+1;
+	    			sap.setVisibleSignature(
+							new Rectangle(llx, (lly-(numberOfSignatures(reader)*50)), urx, (ury-(numberOfSignatures(reader)*50))),
+								1, "sig"+Integer.toString(idSig));
+	    		}
+	    		
+	        } else {
+	        	System.out.println( "APAISADO" );
+	    		// apaisado
+	    		llx = (int)((width*0.06)+0.5); // apaisado
+	    		lly = (int)(pageSize.getTop() - pageSize.getTop()*0.1); // apaisado
+	    		urx = (int)((width*0.4)+0.5); // apaisado
+	    		ury = (int) (pageSize.getTop() - pageSize.getTop()*0.02); // apaisado 
+	    		
+	    		if ( !pdfAlreadySigned(reader) ){
+	    			sap.setVisibleSignature(new Rectangle(llx, lly, urx, ury), 1, "sig1");
+	    		} else {
+	    			idSig = numberOfSignatures(reader)+1;
+	    			sap.setVisibleSignature(
+	            			new Rectangle(llx, (lly-(numberOfSignatures(reader)*48)), urx, (ury-(numberOfSignatures(reader)*48))), 
+	            				1, "sig"+Integer.toString(idSig));
+	    		}
+	        	
+	        }
+	    	
+	    	
+	    	
+	    	
+	    	
+	    	//*******************
+	    	/*
 	    	if (!pdfAlreadySigned(reader) && signatureVisible){
 	    		//sap.setVisibleSignature(new Rectangle(36, 748, 144, 780),1, "sig1");
 	    		
@@ -1701,6 +1751,8 @@ public class MurachiRESTWS {
 				}
 				
 			}
+			*/
+	    	//*******************
 	    	
 	    	sap.setCertificate(chain[0]);
 	    	
