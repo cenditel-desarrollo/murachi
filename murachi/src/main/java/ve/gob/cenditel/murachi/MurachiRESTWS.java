@@ -2,6 +2,9 @@ package ve.gob.cenditel.murachi;
 
 import static java.util.Arrays.asList;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -32,6 +35,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +67,14 @@ import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Image;
 import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.exceptions.InvalidPdfException;
 import com.itextpdf.text.pdf.AcroFields;
@@ -73,6 +84,7 @@ import com.itextpdf.text.pdf.PdfName;
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.PdfSignature;
 import com.itextpdf.text.pdf.PdfSignatureAppearance;
+import com.itextpdf.text.pdf.PdfSignatureAppearance.RenderingMode;
 import com.itextpdf.text.pdf.PdfStamper;
 import com.itextpdf.text.pdf.PdfString;
 import com.itextpdf.text.pdf.security.CertificateInfo;
@@ -90,6 +102,7 @@ import ee.sk.digidoc.SignedDoc;
 import ee.sk.digidoc.factory.DigiDocGenFactory;
 import eu.europa.ec.markt.dss.exception.DSSException;
 
+import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -114,6 +127,8 @@ import org.digidoc4j.signers.PKCS12Signer;
 
 import ve.gob.cenditel.murachi.MurachiException;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.log4j.Logger;
 import org.apache.tika.Tika;
 
@@ -135,7 +150,8 @@ public class MurachiRESTWS {
 	
 	private final String DIGIDOC4J_CONFIGURATION = getAbsolutePathOfResource("digidoc4j.yaml");
 	
-	private final String DIGIDOC4J_TSL_LOCATION = "file://" + getAbsolutePathOfResource("venezuela-tsl.xml");
+	//private final String DIGIDOC4J_TSL_LOCATION = "file://" + getAbsolutePathOfResource("venezuela-tsl.xml");
+	private final String DIGIDOC4J_TSL_LOCATION = "file://" + getAbsolutePathOfResource("RegionalSigned.xml");
 	
 	private final String databaseHost = "localhost";
 	
@@ -146,6 +162,8 @@ public class MurachiRESTWS {
 	private final String databaseLogin = "aaraujo";
 	
 	private final String databasePassword = "aaraujo";
+	
+	//private static final String IMG = "/tmp/murachi/image.png";
 	
 
 	// para reportes de advertencias de BDOC
@@ -312,6 +330,203 @@ public class MurachiRESTWS {
 		
 		return Response.status(200).entity(result).build();
 	}
+	
+	/**
+	 * Retorna un listado de los archivos que se encuentran en el directorio de
+	 * trabajo de Murachi 
+	 * @return JSON con lista de archivos
+	 * @throws URISyntaxException 
+	 * 
+	 * @api {get} /Murachi/0.1/archivos/listado Retorna listado de archivos del 
+	 * directorio de trabajo de Murachi
+	 * @apiName GetListOfFiles
+	 * @apiGroup General
+	 * @apiVersion 0.1.0
+	 * 
+	 * @apiExample Example usage:
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/listado -H "Authorization: Basic YWRtaW46YWRtaW4="
+	 * 
+	 * @apiSuccess {String} murachiWorkingDirectoryContent lista de archivos del directorio de trabajo
+	 */
+	@Path("/listado")
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
+	public Response getContentOfMurachiDirectory() {
+		logger.info("/listado: Murachi working directory list: " );	
+		
+		String path = SERVER_UPLOAD_LOCATION_FOLDER;		
+		JSONObject jsonObject = new JSONObject();		
+		JSONArray list = new JSONArray();
+				
+		File dir = new File(path);
+		List<File> files = (List<File>) FileUtils.listFiles(dir, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE);
+		for (File file : files) {
+				
+			if ( file.getName().endsWith(".pdf") ){
+				logger.info(file.getName());
+				list.put(file.getName());
+			}
+		}		
+		jsonObject.put("murachiWorkingDirectoryContent", list);
+		String result = jsonObject.toString();
+		return Response.status(200).entity(result).build();
+	}
+	
+	/**
+	 * Retorna el archivo pasado como argumento del directorio de trabajo de Murachi 
+	 * @return JSON con lista de archivos
+	 * @throws URISyntaxException 
+	 * 
+	 * @api {get} /Murachi/0.1/archivos/listado/filename Retorna
+	 *  
+	 * @apiName 
+	 * @apiGroup General
+	 * @apiVersion 0.1.0
+	 * 
+	 * @apiExample Example usage:
+     * curl -i https://murachi.cenditel.gob.ve/Murachi/0.1/archivos/listado/9847b5cb-e877-4aba-b88a-5e6882ea829f.pdf -H "Authorization: Basic YWRtaW46YWRtaW4="
+	 * 
+	 * @apiParam {String} filename Identificador del archivo que se desea descargar.
+	 */
+	@Path("/listadopdf/{filename}")
+	@GET
+	//@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	@Produces("application/pdf")
+	//@Authenticator
+	public Response getFileOfMurachiDirectory(@PathParam("filename")  String fileName) {
+		logger.info("/listado/" + fileName );	
+		
+		String path = SERVER_UPLOAD_LOCATION_FOLDER + "/" + fileName;		
+		JSONObject jsonObject = new JSONObject();		
+		JSONArray list = new JSONArray();
+				
+		File file = new File(path);
+		return Response.ok(file, "application/pdf")
+			      .header("Content-Disposition", "filename=\"" + file.getName() + "\"" ) //optional
+			      .build();
+	}
+	
+	
+	@Path("/qr")
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
+	public Response createQRCode() {
+		logger.info("/qr: create QR code " );	
+		
+		String path = SERVER_UPLOAD_LOCATION_FOLDER;
+		
+		String myCodeText = "https://murachi.cenditel.gob.ve/pruebaservicioweb/";
+		String filePath = path +"qr.png";
+		int size = 250;
+		String fileType = "png";
+		File myFile = new File(filePath);
+		
+		try {
+			
+			Map<EncodeHintType, Object> hintMap = new EnumMap<EncodeHintType, Object>(EncodeHintType.class);
+			hintMap.put(EncodeHintType.CHARACTER_SET, "UTF-8");
+			
+			// Now with zxing version 3.2.1 you could change border size (white border size to just 1)
+			hintMap.put(EncodeHintType.MARGIN, 1); /* default = 4 */
+			hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
+ 
+			QRCodeWriter qrCodeWriter = new QRCodeWriter();
+			BitMatrix byteMatrix = qrCodeWriter.encode(myCodeText, BarcodeFormat.QR_CODE, size,
+					size, hintMap);
+			int CrunchifyWidth = byteMatrix.getWidth();
+			BufferedImage image = new BufferedImage(CrunchifyWidth, CrunchifyWidth,
+					BufferedImage.TYPE_INT_RGB);
+			image.createGraphics();
+ 
+			Graphics2D graphics = (Graphics2D) image.getGraphics();
+			graphics.setColor(Color.WHITE);
+			graphics.fillRect(0, 0, CrunchifyWidth, CrunchifyWidth);
+			graphics.setColor(Color.BLACK);
+ 
+			for (int i = 0; i < CrunchifyWidth; i++) {
+				for (int j = 0; j < CrunchifyWidth; j++) {
+					if (byteMatrix.get(i, j)) {
+						graphics.fillRect(i, j, 1, 1);
+					}
+				}
+			}
+			ImageIO.write(image, fileType, myFile);
+		} catch (WriterException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.out.println("\n\nYou have successfully created QR Code.");
+		
+				
+		JSONObject jsonObject = new JSONObject();		
+				
+		jsonObject.put("result", "qr code created successfully");
+		String result = jsonObject.toString();
+		return Response.status(200).entity(result).build();
+	}
+	
+	/**
+	 * Create a QR code to be inserted in the last signature
+	 * 
+	 * @return
+	 */
+	private String createQRCodeForLastSignature(String signedFileId) {
+		logger.info("createQRCode for last signature" );	
+		
+		String path = SERVER_UPLOAD_LOCATION_FOLDER;
+		
+		String myCodeText = "https://murachi.cenditel.gob.ve/ConsultaQR/?signedFileId=" + signedFileId;
+		//String myCodeText = "https://192.168.12.154/ConsultaQR/?signedFileId=d9ec61df-ba71-4773-a2b9-3d7f5d03ce41.pdf";
+		//String myCodeText = "https://192.168.12.154/ConsultaQR/?" + signedFileId;
+		String filePath = path + "qr.png";
+		int size = 250;
+		String fileType = "png";
+		File myFile = new File(filePath);
+		
+		try {
+			
+			Map<EncodeHintType, Object> hintMap = new EnumMap<EncodeHintType, Object>(EncodeHintType.class);
+			hintMap.put(EncodeHintType.CHARACTER_SET, "UTF-8");
+			
+			// Now with zxing version 3.2.1 you could change border size (white border size to just 1)
+			hintMap.put(EncodeHintType.MARGIN, 1); /* default = 4 */
+			hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
+ 
+			QRCodeWriter qrCodeWriter = new QRCodeWriter();
+			BitMatrix byteMatrix = qrCodeWriter.encode(myCodeText, BarcodeFormat.QR_CODE, size,
+					size, hintMap);
+			int CrunchifyWidth = byteMatrix.getWidth();
+			BufferedImage image = new BufferedImage(CrunchifyWidth, CrunchifyWidth,
+					BufferedImage.TYPE_INT_RGB);
+			image.createGraphics();
+ 
+			Graphics2D graphics = (Graphics2D) image.getGraphics();
+			graphics.setColor(Color.WHITE);
+			graphics.fillRect(0, 0, CrunchifyWidth, CrunchifyWidth);
+			graphics.setColor(Color.BLACK);
+ 
+			for (int i = 0; i < CrunchifyWidth; i++) {
+				for (int j = 0; j < CrunchifyWidth; j++) {
+					if (byteMatrix.get(i, j)) {
+						graphics.fillRect(i, j, 1, 1);
+					}
+				}
+			}
+			ImageIO.write(image, fileType, myFile);
+		} catch (WriterException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.out.println("\n\nYou have successfully created QR Code.");
+		
+		return filePath;
+		
+	}
+	
 
 	/**
 	 * Descarga un archivo existente en el servidor
@@ -1377,6 +1592,78 @@ public class MurachiRESTWS {
 	
 	
 	/**
+	 * Escribe un hashmap para establecer el estado de un archivo en proceso de firma.
+	 * 
+	 * El hashmap mantiene <String id, Boolean signing> donde id representa el id del archivo a firmar
+	 * y signing representa si el archivo se encuentra en el proceso de firma
+	 * 
+	 * @param file
+	 */
+	
+	void writeSigningHashmap(HashMap<String, Boolean> hmap) {
+		
+        try
+        {
+               FileOutputStream fos =
+                  new FileOutputStream(SERVER_UPLOAD_LOCATION_FOLDER + "hashmap.ser");
+               synchronized(fos) {
+            	   ObjectOutputStream oos = new ObjectOutputStream(fos);
+            	   oos.writeObject(hmap);
+            	   oos.close();
+            	   fos.close();
+               }
+               System.out.printf("Serialized HashMap data is saved in hashmap.ser");
+               logger.info("Serialized HashMap data is saved in hashmap.ser");                              
+               
+        }catch(IOException ioe)
+         {
+               //ioe.printStackTrace();
+               logger.error(ioe.getMessage());
+         }
+	}
+	
+	
+	/**
+	 * 
+	 * @return
+	 */
+	HashMap<String, Boolean> readSigningHashmap() {
+		String hashmapPath = SERVER_UPLOAD_LOCATION_FOLDER + "hashmap.ser";
+		if ( !checkFileExists(hashmapPath) ) {
+			return new HashMap<String, Boolean>();
+		}
+			
+		HashMap<String, Boolean> map = null;
+	      try
+	      {
+	         FileInputStream fis = new FileInputStream(hashmapPath);
+	         ObjectInputStream ois = new ObjectInputStream(fis);
+	         map = (HashMap) ois.readObject();
+	         ois.close();
+	         fis.close();
+	      }catch(IOException ioe)
+	      {
+	         //ioe.printStackTrace();
+	         logger.error("error: no existe el objeto Hashmap ");
+	         return new HashMap<String, Boolean>();
+	      }catch(ClassNotFoundException c)
+	      {
+	         System.out.println("Class not found");
+	         //c.printStackTrace();
+	         logger.error("error: en lectura de objeto hashmap de archivo en proceso de firma");
+	         return new HashMap<String, Boolean>();
+	      }
+		
+		
+		
+		return map;
+	}
+	
+	
+	
+	
+	
+	/**
 	 * Ejecuta el proceso de presign o preparacion de firma de documento pdf.
 	 * 
 	 * Estructura del JSON que recibe la funcion:
@@ -1938,6 +2225,1171 @@ public class MurachiRESTWS {
 			
 	}
 	
+	@POST
+	@Path("/pdfs2")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
+	//public PresignHash presignPdf(PresignParameters presignPar, @Context HttpServletRequest req) {
+	public Response presignPdf2(PresignParameters presignPar, @Context HttpServletRequest req) throws MurachiException {
+		
+		logger.info("/pdfs2");
+		
+		PresignHash presignHash = new PresignHash();
+
+		String result = "";
+		if (presignPar == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("solicitud mal formada.");
+			result = "\"error\":\"solicitud mal formada\"";
+			return Response.status(400).entity(result).build();	
+		}
+				
+		// obtener el id del archivo 
+		String fileId = presignPar.getFileId();
+		if (fileId == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.debug("fileId == null");
+			logger.error("solicitud mal formada: no esta especificado el identificador del archivo PDF.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el identificador del archivo PDF\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	fileId: " + fileId);
+		
+		// cadena con el certificado
+		String certHex = presignPar.getCertificate();
+		if (certHex == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.debug("certHex == null");
+			logger.error("solicitud mal formada: no esta especificado el certificado del firmante en hexadecimal.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el certificado del firmante en hexadecimal.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	certHex: " + certHex);
+
+		// razon de la firma
+		String reason = presignPar.getReason();
+		if (reason == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.debug("certHex == null");
+			logger.error("solicitud mal formada: no esta especificada la razon de la firma.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificada la razon de la firma.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	reason: " + reason);
+		
+		// ubicacion de la firma
+		String location = presignPar.getLocation();
+		if (location == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.debug("location == null");
+			logger.error("solicitud mal formada: no esta especificada la ubicación donde se realiza la firma.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificada la ubicación donde se realiza la firma.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	location: " + location);
+		
+		// contacto del firmante
+		String contact = presignPar.getContact();
+		if (contact == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.debug("contact == null");
+			logger.error("solicitud mal formada: no esta especificada la informacion de contacto del firmante.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificada la informacion de contacto del firmante.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	location: " + location);
+		
+		// firma visible
+		Boolean signatureVisible = presignPar.getSignatureVisible(); 
+		if (signatureVisible == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.debug("signatureVisible == null");
+			logger.error("solicitud mal formada: no esta especificado si la firma PDF es visible o no.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado si la firma PDF es visible o no.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	signatureVisible: " + Boolean.toString(signatureVisible));
+		
+		Integer pageSignature = 0;
+		Integer xPos = 0;
+		Integer yPos = 0;
+		
+		if (signatureVisible){				
+			String pSignature = presignPar.getSignaturePage();
+			if (pSignature == null) {
+				// registrar error de firma en estadisticas
+				registerASignatureError(0);
+						
+				logger.debug("pSignature == null");
+				logger.error("solicitud mal formada: no esta especificada la pagina para la firma.");
+				result = "\"error\":\"solicitud mal formada: : no esta especificada la pagina para la firma.\"";
+				return Response.status(400).entity(result).build();
+			}
+			pageSignature = Integer.parseInt(pSignature);
+			
+			String x = presignPar.getxPos();
+			if (x == null) {
+				// registrar error de firma en estadisticas
+				registerASignatureError(0);
+						
+				logger.debug("x == null");
+				logger.error("solicitud mal formada: no esta especificada la posicion x de la firma.");
+				result = "\"error\":\"solicitud mal formada: : no esta especificada la posicion x de la firma.\"";
+				return Response.status(400).entity(result).build();
+			}			
+			xPos = Integer.parseInt(x);
+			
+			String y = presignPar.getyPos();
+			if (y == null) {
+				// registrar error de firma en estadisticas
+				registerASignatureError(0);
+						
+				logger.debug("y == null");
+				logger.error("solicitud mal formada: no esta especificada la posicion y de la firma.");
+				result = "\"error\":\"solicitud mal formada: : no esta especificada la posicion y de la firma.\"";
+				return Response.status(400).entity(result).build();
+			}			
+			yPos = Integer.parseInt(y);
+			logger.debug("pageSignature: "+ pageSignature);
+			logger.debug("xPos: "+ xPos);
+			logger.debug("yPos: "+ yPos);
+		}
+		
+		
+		
+		
+		String pdf = SERVER_UPLOAD_LOCATION_FOLDER + fileId;
+		System.out.println("archivo a firmar: " + pdf);
+		logger.debug("archivo a firmar: " + pdf);
+		
+		String mime = getMimeType(pdf);
+		
+		if (!mime.equals("application/pdf")){
+			presignHash.setError("El archivo que desea firmar no es un PDF.");
+			presignHash.setHash("");
+			//return presignHash;
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+									
+			//result = presignHash.toString();
+			logger.info("El archivo que desea firmar no es un PDF.");
+			return Response.status(400).entity(presignHash).build();			
+		}
+							
+		try {
+			CertificateFactory factory = CertificateFactory.getInstance("X.509");
+			Certificate[] chain = new Certificate[1];
+			
+			InputStream in = new ByteArrayInputStream(hexStringToByteArray(certHex));
+			chain[0] = factory.generateCertificate(in);
+			
+			if (chain[0] == null) {
+				System.out.println("error chain[0] == null");
+				logger.error("presignPdf: error en carga de certificado de firmante");
+				//throw new MurachiException("presignPdf: error en carga de certificado de firmante");
+				
+				// registrar error de firma en estadisticas
+				registerASignatureError(0);
+				
+				presignHash.setError("error en carga de certificado de firmante");
+				presignHash.setHash("");
+				return Response.status(500).entity(presignHash).build();
+								
+			}else {
+				
+				System.out.println("se cargo el certificado correctamente");
+				System.out.println(chain[0].toString());
+				logger.debug("se cargo el certificado correctamente");
+				logger.debug(chain[0].toString());
+			}			
+			
+			PdfReader reader = new PdfReader(pdf);			
+			
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			
+			//PdfStamper stamper = PdfStamper.createSignature(reader, baos, '\0');
+			PdfStamper stamper = null;
+			
+			
+			if (pdfAlreadySigned(reader)){
+				stamper = PdfStamper.createSignature(reader, baos, '\0', null, true);
+			}else{
+				stamper = PdfStamper.createSignature(reader, baos, '\0');
+			}
+
+			// crear la apariencia de la firma
+	    	PdfSignatureAppearance sap = stamper.getSignatureAppearance();
+	    		    	
+	    	sap.setReason(reason);
+	    	sap.setReasonCaption("Motivo: ");
+	    	sap.setLocation(location);
+	    	sap.setLocationCaption("Lugar: ");
+	    	sap.setContact(contact);
+	    	sap.setSignatureCreator("Murachi");
+	    	
+	    	// preparer the things for a visible signature
+	    	if (signatureVisible){
+	    		
+	    		//Image image = Image.getInstance(IMG);
+	    	
+	    		sap.setLayer2Text("\nFirmado por: "+ CertificateInfo.getSubjectFields((X509Certificate) chain[0]).getField("CN") +"\nFecha: " + new Date().toString() + "\nRazon: "+ reason+ "\nUbicacion: "+location);
+	    		//sap.setRenderingMode(RenderingMode.GRAPHIC);
+	    		//sap.setRenderingMode(RenderingMode.GRAPHIC_AND_DESCRIPTION);
+	    		sap.setRenderingMode(RenderingMode.DESCRIPTION);
+	    		//sap.setSignatureGraphic(image);
+	    		//sap.setImage(image);
+	    	
+	    		//sap.setVisibleSignature(new Rectangle(36, 748, 144, 780),1, "sig");
+	        
+	    		// testing conversion
+	        
+	    		Rectangle rectangle = reader.getPageSizeWithRotation(pageSignature);
+	    		//Rectangle rectangle = reader.getPageSize(pageSignature);
+	        
+	    		Rectangle pageSize = reader.getPageSize(pageSignature);
+	    	
+	    		Rectangle cropbox = reader.getCropBox(pageSignature);
+	    		logger.info("cropbox width: " + cropbox.getWidth());
+	    		logger.info("cropbox height: " + cropbox.getHeight());
+	    	
+	    	
+	    		float width = rectangle.getWidth();
+	    		logger.info("width: " + width);
+	    		float height = rectangle.getHeight();
+	    		logger.info("height: " + height);
+	    	
+	    		float llx = xPos;
+	    		logger.info("llx: " + llx);
+	        
+	    		//float lly = height-yPos-32;
+	    		float lly = height-yPos-20;
+	    		logger.info("lly: " + lly);
+	        
+	    		float urx = xPos+125;
+	    		logger.info("urx: " + urx);
+	        
+	    		//float ury = height-yPos;
+	    		float ury = height-yPos+10;
+	    		logger.info("ury: " + ury);
+	        
+	    		// 	check if the documents is already signed
+	        
+	    		//sap.setVisibleSignature(new Rectangle(xPos, height-yPos-32, xPos+120, height-yPos),1, "sig");
+	    		//sap.setVisibleSignature(new Rectangle(llx, lly, urx, ury), pageSignature, "sig");
+	        
+	    		if (!pdfAlreadySigned(reader)){
+	    			sap.setVisibleSignature(new Rectangle(llx, lly, urx, ury), pageSignature, "sig1");
+	    		}else {
+	    			int idSig = numberOfSignatures(reader)+1;
+	    			sap.setVisibleSignature(new Rectangle(llx, lly, urx, ury), 
+	    					pageSignature, 
+	    					"sig"+Integer.toString(idSig));
+	    		}
+	    	}
+	    	
+	        /*
+	    	logger.debug( "verificar la orientacion de la primera pagina" );
+	    	// para verificar la orientacion de la primera pagina
+	    	Rectangle rectangle = reader.getPageSizeWithRotation(1);
+	    	Rectangle pageSize = reader.getPageSize(1);
+	    	float width = rectangle.getWidth();
+	    	
+	    	int llx = 0;
+	        int lly = 0;
+	        int urx = 0;
+	        int ury = 0;  
+	        int idSig = 0;
+	        
+	        
+	        if(rectangle.getHeight() >= rectangle.getWidth()) {
+	        	System.out.println( "VERTICAL" );
+	    		// vertical
+	    		llx = (int)((width*0.06)+0.5); // vertical
+	    		lly = (int)(pageSize.getTop() - pageSize.getTop()*0.08); // vertical
+	    		urx = (int)((width*0.3)+0.5); // vertical
+	    		ury = (int) (pageSize.getTop() - pageSize.getTop()*0.02); // vertical
+	    		
+	    		if ( !pdfAlreadySigned(reader) ){
+	    			sap.setVisibleSignature(new Rectangle(llx, lly, urx, ury), 1, "sig1");
+	    		} else {
+	    			idSig = numberOfSignatures(reader)+1;
+	    			sap.setVisibleSignature(
+							new Rectangle(llx, (lly-(numberOfSignatures(reader)*50)), urx, (ury-(numberOfSignatures(reader)*50))),
+								1, "sig"+Integer.toString(idSig));
+	    		}
+	    		
+	        } else {
+	        	System.out.println( "APAISADO" );
+	    		// apaisado
+	    		llx = (int)((width*0.06)+0.5); // apaisado
+	    		lly = (int)(pageSize.getTop() - pageSize.getTop()*0.1); // apaisado
+	    		urx = (int)((width*0.4)+0.5); // apaisado
+	    		ury = (int) (pageSize.getTop() - pageSize.getTop()*0.02); // apaisado 
+	    		
+	    		if ( !pdfAlreadySigned(reader) ){
+	    			sap.setVisibleSignature(new Rectangle(llx, lly, urx, ury), 1, "sig1");
+	    		} else {
+	    			idSig = numberOfSignatures(reader)+1;
+	    			sap.setVisibleSignature(
+	            			new Rectangle(llx, (lly-(numberOfSignatures(reader)*48)), urx, (ury-(numberOfSignatures(reader)*48))), 
+	            				1, "sig"+Integer.toString(idSig));
+	    		}
+	        	
+	        }
+	    	*/
+	    	
+	    	
+	    	
+	    	
+	    	//*******************
+	    	/*
+	    	if (!pdfAlreadySigned(reader) && signatureVisible){
+	    		//sap.setVisibleSignature(new Rectangle(36, 748, 144, 780),1, "sig1");
+	    		
+	    		// verificar la orientacion de la pagina	    		
+	    		if(rectangle.getHeight() >= rectangle.getWidth()) {
+	    			logger.debug( "orientacion de primera pagina: VERTICAL" );	            	
+	                // vertical
+	                sap.setVisibleSignature(new Rectangle(36, 748, 144, 780), 1, "sig1");
+	            } else {
+	            	logger.debug( "orientacion de primera pagina: APAISADO" );
+	            	// apaisado
+	                sap.setVisibleSignature(new Rectangle(36, 600, 200, 540), 1, "sig1");
+	            }
+	    		
+			}else{
+				if (signatureVisible)
+				{
+					int idSig = numberOfSignatures(reader)+1;
+					//sap.setVisibleSignature(new Rectangle(36, 700, 144, 732),1, "sig"+Integer.toString(idSig));
+					//sap.setVisibleSignature(
+					//		new Rectangle(36, (748-(numberOfSignatures(reader)*38)), 144, (780-(numberOfSignatures(reader)*38))),
+					//			1, "sig"+Integer.toString(idSig));
+
+					
+					// verificar la orientacion de la pagina	    		
+		    		if(rectangle.getHeight() >= rectangle.getWidth()) {
+		    			logger.debug( "orientacion de primera pagina: VERTICAL" );
+		                // vertical
+		            	sap.setVisibleSignature(
+								new Rectangle(36, (748-(numberOfSignatures(reader)*38)), 144, (780-(numberOfSignatures(reader)*38))),
+									1, "sig"+Integer.toString(idSig));
+		            } else {
+		            	logger.debug( "orientacion de primera pagina: APAISADO" );
+		            	// apaisado
+		            	sap.setVisibleSignature(
+		            			new Rectangle(36, (600-(numberOfSignatures(reader)*48)), 200, (540-(numberOfSignatures(reader)*48))), 
+		            				1, "sig"+Integer.toString(idSig));
+		            }
+					
+				}
+				
+			}
+			*/
+	    	//*******************
+	    	
+	    	sap.setCertificate(chain[0]);
+	    	
+	    	// crear la estructura de la firma
+	    	PdfSignature dic = new PdfSignature(PdfName.ADOBE_PPKLITE, PdfName.ADBE_PKCS7_DETACHED);
+	    	
+	    	
+	    	dic.setReason(sap.getReason());
+	    	dic.setLocation(sap.getLocation());
+	    	dic.setContact(sap.getContact());
+	    	dic.setDate(new PdfDate(sap.getSignDate()));
+	    	
+	    	sap.setCryptoDictionary(dic);
+	    	
+	    	HashMap<PdfName, Integer> exc = new HashMap<PdfName, Integer> ();
+	    	exc.put(PdfName.CONTENTS, new Integer(8192 * 2 + 2));
+	    	sap.preClose(exc);
+	    	
+	    	ExternalDigest externalDigest = new ExternalDigest() {
+	    		public MessageDigest getMessageDigest(String hashAlgorithm)
+	    		throws GeneralSecurityException {
+	    			return DigestAlgorithms.getMessageDigest(hashAlgorithm, null);
+	    		}
+	    	};
+			
+			
+	    	PdfPKCS7 sgn = new PdfPKCS7(null, chain, SHA256_MESSAGE_DIGEST, null, externalDigest, false);
+	    	
+	    	InputStream data = sap.getRangeStream();
+	    	
+	    	byte hash[] = DigestAlgorithms.digest(data, externalDigest.getMessageDigest(SHA256_MESSAGE_DIGEST));
+	    	
+	    	Calendar cal = Calendar.getInstance();
+	    	byte sh[] = sgn.getAuthenticatedAttributeBytes(hash, cal, null, null, CryptoStandard.CMS);
+	    	
+	    	sh = DigestAlgorithms.digest(new ByteArrayInputStream(sh), externalDigest.getMessageDigest(SHA256_MESSAGE_DIGEST));
+	    	
+	    	System.out.println("sh length: "+ sh.length);
+	    	logger.debug("sh length: "+ sh.length);
+	    	    	
+	    	String hashToSign = byteArrayToHexString(sh);
+	    	logger.debug("hashToSign: "+ hashToSign);
+	    	logger.debug("length: " +hashToSign.length());
+	    	System.out.println("***************************************************************");
+	    	System.out.println("HASH EN HEXADECIMAL:");
+	    	System.out.println(hashToSign);
+	    	System.out.println("length: " +hashToSign.length());	
+	    	System.out.println("***************************************************************");
+			
+	    	DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+			Date date = new Date();
+			System.out.println(dateFormat.format(date));
+			//String d = dateFormat.format(date);
+			
+			
+			// almacenar los objetos necesarios para realizar el postsign en una sesion
+			HttpSession session = req.getSession(true);
+			session.setAttribute("hashToSign", hashToSign);
+			
+			session.setAttribute("stamper", stamper);
+			session.setAttribute("sgn", sgn);
+			session.setAttribute("hash", hash);
+			session.setAttribute("cal", cal);
+			session.setAttribute("sap", sap);
+			session.setAttribute("baos", baos);
+			session.setAttribute("fileId", fileId);
+			
+			logger.debug("***** session: " + session.getId());
+			
+			
+			presignHash.setHash(hashToSign);
+			presignHash.setError("");
+				
+			
+		} catch (CertificateException e1) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e1);
+			e1.printStackTrace();
+			//throw new MurachiException(e1.getMessage());
+			presignHash.setError(e1.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();			
+			
+		} catch (InvalidPdfException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			e.printStackTrace();
+			//presignHash.setError("No se pudo leer el archivo PDF en el servidor");
+			//throw new MurachiException(e.getMessage());
+			presignHash.setError("No se pudo leer el archivo PDF en el servidor");
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} catch (IOException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			e.printStackTrace();
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} catch (DocumentException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			e.printStackTrace();
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} catch (InvalidKeyException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			//e.printStackTrace();
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} catch (NoSuchProviderException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			//e.printStackTrace();
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} catch (NoSuchAlgorithmException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			//e.printStackTrace();
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} catch (GeneralSecurityException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			//e.printStackTrace();
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} 
+		
+		logger.debug("presignPdf: "+ presignHash.toString());
+		return Response.status(200).entity(presignHash).build();
+		//return presignHash;
+			
+	}
+	
+	@POST
+	@Path("/pdfsqr")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	@Authenticator
+	//public PresignHash presignPdf(PresignParameters presignPar, @Context HttpServletRequest req) {
+	public Response presignPdfQR(PresignParameters presignPar, @Context HttpServletRequest req) throws MurachiException {
+		
+		logger.info("/pdfsqr");
+		
+		PresignHash presignHash = new PresignHash();
+
+		String result = "";
+		if (presignPar == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("solicitud mal formada.");
+			result = "\"error\":\"solicitud mal formada\"";
+			return Response.status(400).entity(result).build();	
+		}
+				
+		// obtener el id del archivo 
+		String fileId = presignPar.getFileId();
+		if (fileId == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.debug("fileId == null");
+			logger.error("solicitud mal formada: no esta especificado el identificador del archivo PDF.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el identificador del archivo PDF\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	fileId: " + fileId);
+		
+		// cadena con el certificado
+		String certHex = presignPar.getCertificate();
+		if (certHex == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.debug("certHex == null");
+			logger.error("solicitud mal formada: no esta especificado el certificado del firmante en hexadecimal.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado el certificado del firmante en hexadecimal.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	certHex: " + certHex);
+
+		// razon de la firma
+		String reason = presignPar.getReason();
+		if (reason == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.debug("certHex == null");
+			logger.error("solicitud mal formada: no esta especificada la razon de la firma.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificada la razon de la firma.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	reason: " + reason);
+		
+		// ubicacion de la firma
+		String location = presignPar.getLocation();
+		if (location == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.debug("location == null");
+			logger.error("solicitud mal formada: no esta especificada la ubicación donde se realiza la firma.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificada la ubicación donde se realiza la firma.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	location: " + location);
+		
+		// contacto del firmante
+		String contact = presignPar.getContact();
+		if (contact == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.debug("contact == null");
+			logger.error("solicitud mal formada: no esta especificada la informacion de contacto del firmante.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificada la informacion de contacto del firmante.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	location: " + location);
+		
+		// firma visible
+		Boolean signatureVisible = presignPar.getSignatureVisible(); 
+		if (signatureVisible == null) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.debug("signatureVisible == null");
+			logger.error("solicitud mal formada: no esta especificado si la firma PDF es visible o no.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado si la firma PDF es visible o no.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	signatureVisible: " + Boolean.toString(signatureVisible));
+		
+		// firma visible
+		Boolean lastSignature = presignPar.getLastSignature();
+		if (lastSignature == null) {
+					
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+				
+			logger.debug("lastSignature == null");
+			logger.error("solicitud mal formada: no esta especificado si la firma es la ultima o no.");
+			result = "\"error\":\"solicitud mal formada: : no esta especificado si la firma es la última o no.\"";
+			return Response.status(400).entity(result).build();
+		}
+		logger.debug("	lastSignature: " + Boolean.toString(lastSignature));
+		
+		Integer pageSignature = 0;
+		Integer xPos = 0;
+		Integer yPos = 0;
+		
+		if (lastSignature)
+			signatureVisible = true;
+		
+		
+		if (signatureVisible){				
+			String pSignature = presignPar.getSignaturePage();
+			if (pSignature == null) {
+				// registrar error de firma en estadisticas
+				registerASignatureError(0);
+						
+				logger.debug("pSignature == null");
+				logger.error("solicitud mal formada: no esta especificada la pagina para la firma.");
+				result = "\"error\":\"solicitud mal formada: : no esta especificada la pagina para la firma.\"";
+				return Response.status(400).entity(result).build();
+			}
+			pageSignature = Integer.parseInt(pSignature);
+			
+			String x = presignPar.getxPos();
+			if (x == null) {
+				// registrar error de firma en estadisticas
+				registerASignatureError(0);
+						
+				logger.debug("x == null");
+				logger.error("solicitud mal formada: no esta especificada la posicion x de la firma.");
+				result = "\"error\":\"solicitud mal formada: : no esta especificada la posicion x de la firma.\"";
+				return Response.status(400).entity(result).build();
+			}			
+			xPos = Integer.parseInt(x);
+			
+			String y = presignPar.getyPos();
+			if (y == null) {
+				// registrar error de firma en estadisticas
+				registerASignatureError(0);
+						
+				logger.debug("y == null");
+				logger.error("solicitud mal formada: no esta especificada la posicion y de la firma.");
+				result = "\"error\":\"solicitud mal formada: : no esta especificada la posicion y de la firma.\"";
+				return Response.status(400).entity(result).build();
+			}			
+			yPos = Integer.parseInt(y);
+			logger.debug("pageSignature: "+ pageSignature);
+			logger.debug("xPos: "+ xPos);
+			logger.debug("yPos: "+ yPos);
+		}
+		
+		
+		
+		
+		String pdf = SERVER_UPLOAD_LOCATION_FOLDER + fileId;
+		System.out.println("archivo a firmar: " + pdf);
+		logger.debug("archivo a firmar: " + pdf);
+		
+		String mime = getMimeType(pdf);
+		
+		if (!mime.equals("application/pdf")){
+			presignHash.setError("El archivo que desea firmar no es un PDF.");
+			presignHash.setHash("");
+			//return presignHash;
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+									
+			//result = presignHash.toString();
+			logger.info("El archivo que desea firmar no es un PDF.");
+			return Response.status(400).entity(presignHash).build();			
+		}
+							
+		try {
+			CertificateFactory factory = CertificateFactory.getInstance("X.509");
+			Certificate[] chain = new Certificate[1];
+			
+			InputStream in = new ByteArrayInputStream(hexStringToByteArray(certHex));
+			chain[0] = factory.generateCertificate(in);
+			
+			if (chain[0] == null) {
+				System.out.println("error chain[0] == null");
+				logger.error("presignPdf: error en carga de certificado de firmante");
+				//throw new MurachiException("presignPdf: error en carga de certificado de firmante");
+				
+				// registrar error de firma en estadisticas
+				registerASignatureError(0);
+				
+				presignHash.setError("error en carga de certificado de firmante");
+				presignHash.setHash("");
+				return Response.status(500).entity(presignHash).build();
+								
+			}else {
+				
+				System.out.println("se cargo el certificado correctamente");
+				System.out.println(chain[0].toString());
+				logger.debug("se cargo el certificado correctamente");
+				logger.debug(chain[0].toString());
+			}			
+			
+			PdfReader reader = new PdfReader(pdf);			
+			
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			
+			//PdfStamper stamper = PdfStamper.createSignature(reader, baos, '\0');
+			PdfStamper stamper = null;
+			
+			
+			if (pdfAlreadySigned(reader)){
+				stamper = PdfStamper.createSignature(reader, baos, '\0', null, true);
+			}else{
+				stamper = PdfStamper.createSignature(reader, baos, '\0');
+			}
+
+			// crear la apariencia de la firma
+	    	PdfSignatureAppearance sap = stamper.getSignatureAppearance();
+	    		    	
+	    	sap.setReason(reason);
+	    	sap.setReasonCaption("Motivo: ");
+	    	sap.setLocation(location);
+	    	sap.setLocationCaption("Lugar: ");
+	    	sap.setContact(contact);
+	    	sap.setSignatureCreator("Murachi");
+	    	
+	    	// check the certification level
+	    	//if (lastSignature)
+			//	sap.setCertificationLevel(PdfSignatureAppearance.CERTIFIED_NO_CHANGES_ALLOWED);
+	    	
+	    	// preparer the things for a visible signature
+	    	if (signatureVisible){
+	    		
+	    		//Image image = Image.getInstance(IMG);
+	    		Image image = Image.getInstance(createQRCodeForLastSignature(fileId+".pdf"));
+	    	
+	    		//sap.setLayer2Text("\nFirmado por: "+ CertificateInfo.getSubjectFields((X509Certificate) chain[0]).getField("CN") +"\nFecha: " + new Date().toString() + "\nRazon: "+ reason+ "\nUbicacion: "+location);
+	    		sap.setRenderingMode(RenderingMode.GRAPHIC);
+	    		//sap.setRenderingMode(RenderingMode.GRAPHIC_AND_DESCRIPTION);
+	    		//sap.setRenderingMode(RenderingMode.DESCRIPTION);
+	    		sap.setSignatureGraphic(image);
+	    		//sap.setImage(image);
+	    	
+	    		//sap.setVisibleSignature(new Rectangle(36, 748, 144, 780),1, "sig");
+	        
+	    		// testing conversion
+	        
+	    		Rectangle rectangle = reader.getPageSizeWithRotation(pageSignature);
+	    		//Rectangle rectangle = reader.getPageSize(pageSignature);
+	        
+	    		Rectangle pageSize = reader.getPageSize(pageSignature);
+	    	
+	    		Rectangle cropbox = reader.getCropBox(pageSignature);
+	    		logger.info("cropbox width: " + cropbox.getWidth());
+	    		logger.info("cropbox height: " + cropbox.getHeight());
+	    	
+	    	
+	    		float width = rectangle.getWidth();
+	    		logger.info("width: " + width);
+	    		float height = rectangle.getHeight();
+	    		logger.info("height: " + height);
+	    	
+	    		float llx = xPos;
+	    		logger.info("llx: " + llx);
+	        
+	    		//float lly = height-yPos-32;
+	    		float lly = height-yPos-60;
+	    		logger.info("lly: " + lly);
+	        
+	    		float urx = xPos+60;
+	    		logger.info("urx: " + urx);
+	        
+	    		//float ury = height-yPos;
+	    		//float ury = height-yPos+10;
+	    		float ury = height-yPos;
+	    		logger.info("ury: " + ury);
+	        
+	    		// 	check if the documents is already signed
+	        
+	    		//sap.setVisibleSignature(new Rectangle(xPos, height-yPos-32, xPos+120, height-yPos),1, "sig");
+	    		//sap.setVisibleSignature(new Rectangle(llx, lly, urx, ury), pageSignature, "sig");
+	        
+	    		if (!pdfAlreadySigned(reader)){
+	    			sap.setVisibleSignature(new Rectangle(llx, lly, urx, ury), pageSignature, "sig1");
+	    		}else {
+	    			int idSig = numberOfSignatures(reader)+1;
+	    			sap.setVisibleSignature(new Rectangle(llx, lly, urx, ury), 
+	    					pageSignature, 
+	    					"sig"+Integer.toString(idSig));
+	    		}
+	    	}
+	    	
+	        /*
+	    	logger.debug( "verificar la orientacion de la primera pagina" );
+	    	// para verificar la orientacion de la primera pagina
+	    	Rectangle rectangle = reader.getPageSizeWithRotation(1);
+	    	Rectangle pageSize = reader.getPageSize(1);
+	    	float width = rectangle.getWidth();
+	    	
+	    	int llx = 0;
+	        int lly = 0;
+	        int urx = 0;
+	        int ury = 0;  
+	        int idSig = 0;
+	        
+	        
+	        if(rectangle.getHeight() >= rectangle.getWidth()) {
+	        	System.out.println( "VERTICAL" );
+	    		// vertical
+	    		llx = (int)((width*0.06)+0.5); // vertical
+	    		lly = (int)(pageSize.getTop() - pageSize.getTop()*0.08); // vertical
+	    		urx = (int)((width*0.3)+0.5); // vertical
+	    		ury = (int) (pageSize.getTop() - pageSize.getTop()*0.02); // vertical
+	    		
+	    		if ( !pdfAlreadySigned(reader) ){
+	    			sap.setVisibleSignature(new Rectangle(llx, lly, urx, ury), 1, "sig1");
+	    		} else {
+	    			idSig = numberOfSignatures(reader)+1;
+	    			sap.setVisibleSignature(
+							new Rectangle(llx, (lly-(numberOfSignatures(reader)*50)), urx, (ury-(numberOfSignatures(reader)*50))),
+								1, "sig"+Integer.toString(idSig));
+	    		}
+	    		
+	        } else {
+	        	System.out.println( "APAISADO" );
+	    		// apaisado
+	    		llx = (int)((width*0.06)+0.5); // apaisado
+	    		lly = (int)(pageSize.getTop() - pageSize.getTop()*0.1); // apaisado
+	    		urx = (int)((width*0.4)+0.5); // apaisado
+	    		ury = (int) (pageSize.getTop() - pageSize.getTop()*0.02); // apaisado 
+	    		
+	    		if ( !pdfAlreadySigned(reader) ){
+	    			sap.setVisibleSignature(new Rectangle(llx, lly, urx, ury), 1, "sig1");
+	    		} else {
+	    			idSig = numberOfSignatures(reader)+1;
+	    			sap.setVisibleSignature(
+	            			new Rectangle(llx, (lly-(numberOfSignatures(reader)*48)), urx, (ury-(numberOfSignatures(reader)*48))), 
+	            				1, "sig"+Integer.toString(idSig));
+	    		}
+	        	
+	        }
+	    	*/
+	    	
+	    	
+	    	
+	    	
+	    	//*******************
+	    	/*
+	    	if (!pdfAlreadySigned(reader) && signatureVisible){
+	    		//sap.setVisibleSignature(new Rectangle(36, 748, 144, 780),1, "sig1");
+	    		
+	    		// verificar la orientacion de la pagina	    		
+	    		if(rectangle.getHeight() >= rectangle.getWidth()) {
+	    			logger.debug( "orientacion de primera pagina: VERTICAL" );	            	
+	                // vertical
+	                sap.setVisibleSignature(new Rectangle(36, 748, 144, 780), 1, "sig1");
+	            } else {
+	            	logger.debug( "orientacion de primera pagina: APAISADO" );
+	            	// apaisado
+	                sap.setVisibleSignature(new Rectangle(36, 600, 200, 540), 1, "sig1");
+	            }
+	    		
+			}else{
+				if (signatureVisible)
+				{
+					int idSig = numberOfSignatures(reader)+1;
+					//sap.setVisibleSignature(new Rectangle(36, 700, 144, 732),1, "sig"+Integer.toString(idSig));
+					//sap.setVisibleSignature(
+					//		new Rectangle(36, (748-(numberOfSignatures(reader)*38)), 144, (780-(numberOfSignatures(reader)*38))),
+					//			1, "sig"+Integer.toString(idSig));
+
+					
+					// verificar la orientacion de la pagina	    		
+		    		if(rectangle.getHeight() >= rectangle.getWidth()) {
+		    			logger.debug( "orientacion de primera pagina: VERTICAL" );
+		                // vertical
+		            	sap.setVisibleSignature(
+								new Rectangle(36, (748-(numberOfSignatures(reader)*38)), 144, (780-(numberOfSignatures(reader)*38))),
+									1, "sig"+Integer.toString(idSig));
+		            } else {
+		            	logger.debug( "orientacion de primera pagina: APAISADO" );
+		            	// apaisado
+		            	sap.setVisibleSignature(
+		            			new Rectangle(36, (600-(numberOfSignatures(reader)*48)), 200, (540-(numberOfSignatures(reader)*48))), 
+		            				1, "sig"+Integer.toString(idSig));
+		            }
+					
+				}
+				
+			}
+			*/
+	    	//*******************
+	    	
+	    	sap.setCertificate(chain[0]);
+	    	
+	    	// crear la estructura de la firma
+	    	PdfSignature dic = new PdfSignature(PdfName.ADOBE_PPKLITE, PdfName.ADBE_PKCS7_DETACHED);
+	    	
+	    	
+	    	dic.setReason(sap.getReason());
+	    	dic.setLocation(sap.getLocation());
+	    	dic.setContact(sap.getContact());
+	    	dic.setDate(new PdfDate(sap.getSignDate()));
+	    	
+	    	sap.setCryptoDictionary(dic);
+	    	
+	    	HashMap<PdfName, Integer> exc = new HashMap<PdfName, Integer> ();
+	    	exc.put(PdfName.CONTENTS, new Integer(8192 * 2 + 2));
+	    	sap.preClose(exc);
+	    	
+	    	ExternalDigest externalDigest = new ExternalDigest() {
+	    		public MessageDigest getMessageDigest(String hashAlgorithm)
+	    		throws GeneralSecurityException {
+	    			return DigestAlgorithms.getMessageDigest(hashAlgorithm, null);
+	    		}
+	    	};
+			
+			
+	    	PdfPKCS7 sgn = new PdfPKCS7(null, chain, SHA256_MESSAGE_DIGEST, null, externalDigest, false);
+	    	
+	    	InputStream data = sap.getRangeStream();
+	    	
+	    	byte hash[] = DigestAlgorithms.digest(data, externalDigest.getMessageDigest(SHA256_MESSAGE_DIGEST));
+	    	
+	    	Calendar cal = Calendar.getInstance();
+	    	byte sh[] = sgn.getAuthenticatedAttributeBytes(hash, cal, null, null, CryptoStandard.CMS);
+	    	
+	    	sh = DigestAlgorithms.digest(new ByteArrayInputStream(sh), externalDigest.getMessageDigest(SHA256_MESSAGE_DIGEST));
+	    	
+	    	System.out.println("sh length: "+ sh.length);
+	    	logger.debug("sh length: "+ sh.length);
+	    	    	
+	    	String hashToSign = byteArrayToHexString(sh);
+	    	logger.debug("hashToSign: "+ hashToSign);
+	    	logger.debug("length: " +hashToSign.length());
+	    	System.out.println("***************************************************************");
+	    	System.out.println("HASH EN HEXADECIMAL:");
+	    	System.out.println(hashToSign);
+	    	System.out.println("length: " +hashToSign.length());	
+	    	System.out.println("***************************************************************");
+			
+	    	DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+			Date date = new Date();
+			System.out.println(dateFormat.format(date));
+			//String d = dateFormat.format(date);
+			
+			
+			// almacenar los objetos necesarios para realizar el postsign en una sesion
+			HttpSession session = req.getSession(true);
+			session.setAttribute("hashToSign", hashToSign);
+			
+			session.setAttribute("stamper", stamper);
+			session.setAttribute("sgn", sgn);
+			session.setAttribute("hash", hash);
+			session.setAttribute("cal", cal);
+			session.setAttribute("sap", sap);
+			session.setAttribute("baos", baos);
+			session.setAttribute("fileId", fileId);
+			
+			logger.debug("***** session: " + session.getId());
+			
+			
+			presignHash.setHash(hashToSign);
+			presignHash.setError("");
+				
+			
+		} catch (CertificateException e1) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e1);
+			e1.printStackTrace();
+			//throw new MurachiException(e1.getMessage());
+			presignHash.setError(e1.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();			
+			
+		} catch (InvalidPdfException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			e.printStackTrace();
+			//presignHash.setError("No se pudo leer el archivo PDF en el servidor");
+			//throw new MurachiException(e.getMessage());
+			presignHash.setError("No se pudo leer el archivo PDF en el servidor");
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} catch (IOException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			e.printStackTrace();
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} catch (DocumentException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			e.printStackTrace();
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} catch (InvalidKeyException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			//e.printStackTrace();
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} catch (NoSuchProviderException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			//e.printStackTrace();
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} catch (NoSuchAlgorithmException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			//e.printStackTrace();
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} catch (GeneralSecurityException e) {
+			
+			// registrar error de firma en estadisticas
+			registerASignatureError(0);
+			
+			logger.error("presignPdf ocurrio una excepcion ", e);
+			//e.printStackTrace();
+			//throw new MurachiException(e.getMessage());
+			
+			presignHash.setError(e.getMessage());
+			presignHash.setHash("");
+			return Response.status(500).entity(presignHash).build();
+			
+		} 
+		
+		logger.debug("presignPdf: "+ presignHash.toString());
+		return Response.status(200).entity(presignHash).build();
+		//return presignHash;
+			
+	}
+	
+	
 	/**
 	 * Retorna verdadero si el archivo pdf pasado como argumento ya esta firmado.
 	 * 
@@ -2061,9 +3513,7 @@ public class MurachiRESTWS {
 		}
 		logger.debug("	signature: " + signature);
 		
-		HttpSession session = req.getSession(false);
-		
-		logger.debug("***** session: " + session.getId());
+		HttpSession session = req.getSession(false);			
 		
 		if (session == null) {
 			// registrar error de firma en estadisticas
@@ -2074,6 +3524,7 @@ public class MurachiRESTWS {
 			result = "\"error\":\" Sesion HTTPSession es null.\"";
 			return Response.status(500).entity(result).build();
 		}
+		logger.debug("***** session: " + session.getId());
 		
 		
 		String fileId = (String) session.getAttribute("fileId");
@@ -2214,11 +3665,20 @@ public class MurachiRESTWS {
 			jsonError.put("error", e.getMessage());
 			return Response.status(500).entity(jsonError).build();
 			
+		}		
+		
+		String signedFileId = "";
+		
+		if (fileId.endsWith(".pdf")) {
+			signedFileId = fileId;
+		} else {
+			signedFileId = fileId + ".pdf";
 		}
-		
-		String signedPdf = SERVER_UPLOAD_LOCATION_FOLDER + fileId + "-signed.pdf";
-		
-		FileOutputStream signedFile = new FileOutputStream(signedPdf);
+		//String signedPdf = SERVER_UPLOAD_LOCATION_FOLDER + fileId + "-signed.pdf";
+		String signedPdfFullPath = SERVER_UPLOAD_LOCATION_FOLDER + signedFileId;
+
+				
+		FileOutputStream signedFile = new FileOutputStream(signedPdfFullPath);
 		
 		os.writeTo(signedFile);
 		os.flush();
@@ -2230,11 +3690,17 @@ public class MurachiRESTWS {
 			
 		PostsignMessage message = new PostsignMessage();
 		//message.setMessage(SERVER_UPLOAD_LOCATION_FOLDER + fileId + "-signed.pdf");
-		message.setMessage("{\"signedFile\":"+fileId + "-signed.pdf}");
+		//message.setMessage("{\"signedFile\":"+fileId + "-signed.pdf}");
+				
+		message.setMessage("{\"signedFile\":"+ signedFileId +"}");
+		
+		
+		//message.setMessage("{\"signedFile\":"+fileId + ".pdf}");
 		//return Response.status(200).entity(message).build();
 		
 		JSONObject jsonFinalResult = new JSONObject();
-		jsonFinalResult.put("signedFileId",fileId + "-signed.pdf");
+		//jsonFinalResult.put("signedFileId",fileId + "-signed.pdf");
+		jsonFinalResult.put("signedFileId", signedFileId );
 		
 		logger.info(jsonFinalResult.toString());
 		

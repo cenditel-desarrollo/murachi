@@ -22,6 +22,14 @@ public class PresignParameters {
 	
 	private Boolean signatureVisible;
 	
+	private String signaturePage;
+	
+	private String xPos;
+	
+	private String yPos;
+	
+	private Boolean lastSignature;
+	
 	public String getFileId() {
 		return fileId;
 	}
@@ -68,5 +76,37 @@ public class PresignParameters {
 
 	public void setSignatureVisible(Boolean signatureVisible) {
 		this.signatureVisible = signatureVisible;
+	}
+
+	public String getxPos() {
+		return xPos;
+	}
+
+	public void setxPos(String xPos) {
+		this.xPos = xPos;
+	}
+
+	public String getSignaturePage() {
+		return signaturePage;
+	}
+
+	public void setSignaturePage(String signaturePage) {
+		this.signaturePage = signaturePage;
+	}
+
+	public String getyPos() {
+		return yPos;
+	}
+
+	public void setyPos(String yPos) {
+		this.yPos = yPos;
+	}
+
+	public Boolean getLastSignature() {
+		return lastSignature;
+	}
+
+	public void setLastSignature(Boolean lastSignature) {
+		this.lastSignature = lastSignature;
 	}
 }
